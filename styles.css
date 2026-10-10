@@ -1,0 +1,1565 @@
+/* ============================================================================
+   Sohna — Punjabi wedding invitation
+   Cinematic layered-parallax scenes carrying real invitation content.
+
+   Structure: 8 full-viewport .panel scenes. Each stacks transparent .layer
+   images (background → glow → figures → props → foreground) that drift on
+   scroll and breathe when scrolling stops.
+
+   The one thing to understand before editing: GSAP owns `transform` on every
+   .layer. Never position a layer with transform — use left/right/width/height
+   and background-position instead, or the idle animation will fight you.
+   ========================================================================= */
+
+:root {
+  --marigold:   #E8A33D;
+  --marigold-d: #C9761B;
+  --maroon:     #6B1F2A;
+  --maroon-d:   #3D0F17;
+  --ink:        #FBF0E4;
+  --ink-soft:  white;
+  --ink-faint: lightgray;
+  --night:      #1A0F14;
+
+  --serif: "Cormorant Garamond", Georgia, "Times New Roman", serif;
+  --sans:  "Jost", -apple-system, "Segoe UI", sans-serif;
+  --ease:  cubic-bezier(.22, .61, .36, 1);
+
+  /* Panel side padding, reused by the scene text and the cards inside it. */
+  --pad-x: 8vw;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  height: 100%;
+  background: var(--night);
+  color: var(--ink);
+  font-family: var(--serif);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow: hidden;               /* .scroller does the scrolling */
+}
+
+img { max-width: 100%; display: block; }
+
+.language-switch {
+  position: fixed;
+  z-index: 250;
+  top: max(14px, env(safe-area-inset-top));
+  right: max(16px, env(safe-area-inset-right));
+  display: inline-flex;
+  gap: 2px;
+  padding: 4px;
+  border: 1px solid rgba(232, 163, 61, .45);
+  border-radius: 3px;
+  background: rgba(26, 12, 14, .82);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, .25);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.language-switch button {
+  min-height: 34px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+  color: var(--ink-soft);
+  font-family: "Jost", "Nirmala UI", "Segoe UI", sans-serif;
+  font-size: .82rem;
+  cursor: pointer;
+}
+.language-switch button[aria-pressed="true"] {
+  background: var(--marigold);
+  color: var(--maroon-d);
+  font-weight: 600;
+}
+.language-switch button:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+/* ── Scroller ───────────────────────────────────────────────────────────
+   Scrolling happens inside .scroller, not on window — ScrollTrigger is
+   configured with the same element. Continuous flow, no scroll-snap, so
+   scenes bleed into one another. */
+.scroller {
+  height: 100svh;
+  overflow-y: scroll;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.scroller::-webkit-scrollbar { width: 0; height: 0; }
+
+/* The gate is up until the guest taps; don't let the page scroll behind it. */
+body.is-gated .scroller { overflow: hidden; }
+
+/* ── Panels ─────────────────────────────────────────────────────────── */
+.panel {
+  position: relative;
+  min-height: 100svh;
+  overflow: hidden;
+  display: grid;
+  place-items: end start;
+  isolation: isolate;
+}
+
+/* Scenes carrying long content (functions, RSVP) grow past one screen. */
+/* Content-carrying scenes grow past one screen when they need to — but they
+   must never shrink below it, or the next scene's background bleeds in above
+   the fold (hit this for real on scene 7 at 390px, where the Instagram +
+   film block came to only 0.87 screens). min-height keeps the floor; the
+   content pushes past it on its own. */
+.panel--tall { min-height: 100svh; padding: 14svh 0; }
+
+.panel[data-text="top-left"]     { place-items: start start; }
+.panel[data-text="top-right"]    { place-items: start end; }
+.panel[data-text="center-left"]  { place-items: center start; }
+.panel[data-text="center"]       { place-items: center; }
+.panel[data-text="bottom-left"]  { place-items: end start; }
+.panel[data-text="bottom-right"] { place-items: end end; }
+
+/* Fallback tint so a scene looks intentional before its art loads. */
+.panel[data-tint="warm"] {
+  background: radial-gradient(120% 120% at 60% 30%, #7A3520 0%, #2E1310 55%, #180A0C 100%);
+}
+.panel[data-tint="cool"] {
+  background: radial-gradient(120% 120% at 35% 25%, #2E2B5A 0%, #161033 55%, #0A0820 100%);
+}
+
+/* ── Layers ─────────────────────────────────────────────────────────────
+   .layer      = the opaque background plate, overscanned so parallax never
+                 reveals a bare edge.
+   .layer.el   = a transparent cutout composed on the same canvas, laid in
+                 at `contain` so it lands where it was drawn. */
+.layer {
+  position: absolute;
+  inset: -12%;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  will-change: transform;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.layer.el {
+  inset: 0;
+  background-size: contain;
+  background-position: 62% bottom;
+}
+
+/* Fade a layer in once its image has actually decoded, so scenes never
+   flash a half-loaded plate. JS adds .is-ready. */
+.layer { opacity: 0; transition: opacity .6s var(--ease); }
+.layer.is-ready { opacity: 1; }
+.layer.el.glow.is-ready { opacity: .55; }
+
+/* ── Placement classes ──────────────────────────────────────────────────
+   Re-anchor a cutout with left/right/width/height — never transform.
+
+   These are tuned against the real artwork, scene by scene. When new art
+   lands, expect to nudge them: the generator rarely places a figure exactly
+   where the previous one stood, and a figure under the title block is the
+   usual symptom. */
+.layer.el.fig-left {
+  /* Scene 1's bride is composed toward the right of her own canvas, so the box
+     is offset left to land her nearer the middle of the SCREEN while keeping
+     her clear of the "Gurnoor & Simranjit" title on the left. */
+  inset: auto; left: 24%; right: auto; bottom: 0;
+  width: 54%; height: 120%;
+}
+.layer.el.fig-right {
+  inset: auto; right: 4%; left: auto; bottom: 0;
+  width: 52%; height: 120%;
+}
+.layer.el.fig-cl {
+  inset: auto; left: 2%; right: auto; bottom: 0;
+  width: 60%; height: 104%;
+}
+.layer.el.fig-cr {
+  inset: auto; right: 7%; left: auto; bottom: -4%;
+  width: 64%; height: 112%;
+}
+/* Centred via left+right, never translate — GSAP owns transform.
+   116% overshot once the real art arrived: scene 3's seated couple was drawn
+   filling more of its canvas than the placeholder, so the extra height cropped
+   them at the bottom edge. Sized to the frame instead. */
+.layer.el.fig-center {
+  inset: auto; left: 18%; right: 18%; bottom: 0;
+  height: 98%;
+}
+.layer.el.fig-seated {
+  inset: auto; left: 20%; right: 20%; bottom: 0;
+  height: 78%;
+}
+
+/* The finale's seated couple came back larger than briefed and rose into the
+   footer, printing the date and watermark across the groom's turban. Hold it
+   small and low so the closing lines stay clean. */
+.panel--finale .layer.el.fig-seated {
+  left: 30%; right: 30%;
+  height: 42%;
+}
+@media (max-width: 720px) {
+  .panel--finale .layer.el.fig-seated { left: 14%; right: 14%; height: 34%; }
+}
+.panel--finale .layer.el.fig-seated.is-ready { opacity: .9; }
+.panel--finale .footer { position: relative; z-index: 61; }
+
+/* Scenes that carry cards (functions, RSVP) put content across the FULL width,
+   not just one text column — so a centred figure lands underneath it. Scene 4's
+   dancers ran straight through the Sangeet and Anand Karaj cards. Push the
+   figure into the right margin, below the card grid, and let it sit back a
+   little so the cards stay the subject. */
+.panel--tall .layer.el.fig-center {
+  left: auto; right: 0;
+  width: 62%;
+  height: 88%;
+}
+.panel--tall .layer.el.fig-center.is-ready { opacity: .82; }
+.layer.el.hands {
+  inset: 6% 12% 26% 12%;   /* high in frame, clear of the text block below */
+  background-size: contain;
+  background-position: center;
+}
+.layer.el.branch {
+  inset: 0;
+  background-size: cover;
+  background-position: center top;
+}
+.layer.el.toplights {
+  /* A hanging band (garlands, string lights) that frames the TOP of the scene.
+     `cover` would scale a 3:2 source up to fill a wide viewport and push the
+     hanging ends down over the text — real problem on scene 2, where the
+     marigolds landed across the family names. Anchoring the box height
+     instead keeps it a band, and `100% auto` scales by width so the strands
+     stay their drawn thickness. */
+  inset: 0 0 auto 0;
+  height: 46%;
+  background-size: 100% auto;
+  background-position: center top;
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 52%, transparent 92%);
+          mask-image: linear-gradient(180deg, #000 0%, #000 52%, transparent 92%);
+}
+.layer.el.fill {
+  inset: -6%;
+  background-size: cover;
+  background-position: center bottom;
+}
+/* The glow is an accent BEHIND the people — never a veil over them. */
+.layer.el.glow { z-index: 0; }
+
+/* Scene 5's petals came back dense rather than sparse, and at full strength
+   they rained over the text. Accent layers are atmosphere, never foreground:
+   hold them back and keep them behind the copy. */
+.panel[data-scene="5"] .layer.el.fill:not(.glow) { z-index: 0; }
+.panel[data-scene="5"] .layer.el.fill:not(.glow).is-ready { opacity: .45; }
+
+/* ── Feathering ─────────────────────────────────────────────────────────
+   Every cutout is a rectangle; without a mask its edge shows as a seam.
+   Figures stay solid at the bottom so they keep their footing. */
+.layer.el.fig-left,
+.layer.el.fig-right,
+.layer.el.fig-cl,
+.layer.el.fig-cr,
+.layer.el.fig-center,
+.layer.el.fig-seated {
+  -webkit-mask-image:
+    linear-gradient(90deg, transparent 0%, #000 14%, #000 86%, transparent 100%),
+    linear-gradient(180deg, transparent 0%, #000 12%, #000 100%);
+  -webkit-mask-composite: source-in;
+  mask-image:
+    linear-gradient(90deg, transparent 0%, #000 14%, #000 86%, transparent 100%),
+    linear-gradient(180deg, transparent 0%, #000 12%, #000 100%);
+  mask-composite: intersect;
+}
+.layer.el.branch {
+  -webkit-mask-image: radial-gradient(140% 120% at 15% 5%, #000 55%, transparent 85%);
+          mask-image: radial-gradient(140% 120% at 15% 5%, #000 55%, transparent 85%);
+}
+/* A floating centred close-up. The tight oval sliced fingertips and forearms
+   once the real art arrived — it was drawn filling its canvas (alpha bbox
+   1344x989 of 1536x1024), not the middle half the brief asked for. The artwork
+   carries its own soft falloff, so this only takes the corners off. */
+.layer.el.hands {
+  -webkit-mask-image: radial-gradient(ellipse 86% 88% at 50% 50%, #000 78%, transparent 100%);
+          mask-image: radial-gradient(ellipse 86% 88% at 50% 50%, #000 78%, transparent 100%);
+}
+.layer.el.fill {
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 10%, #000 90%, transparent 100%);
+          mask-image: linear-gradient(90deg, transparent 0%, #000 10%, #000 90%, transparent 100%);
+}
+
+/* ── Cinematic grade ────────────────────────────────────────────────────
+   Vignette + directional scrims so type reads over any artwork. */
+.panel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
+  background:
+    radial-gradient(130% 100% at 50% 45%, transparent 55%, rgba(24, 10, 12, .52) 100%),
+    linear-gradient(180deg, rgba(24, 10, 12, .60) 0%, transparent 34%),
+    linear-gradient(0deg,   rgba(24, 10, 12, .58) 0%, transparent 32%);
+}
+/* Darken the side the text sits on, so the words always have a ground. */
+.panel[data-text$="left"]::after  { background-image:
+    radial-gradient(130% 100% at 50% 45%, transparent 55%, rgba(24,10,12,.52) 100%),
+    linear-gradient(180deg, rgba(24,10,12,.60) 0%, transparent 34%),
+    linear-gradient(0deg,   rgba(24,10,12,.58) 0%, transparent 32%),
+    linear-gradient(90deg,  rgba(24,10,12,.58) 0%, transparent 46%); }
+.panel[data-text$="right"]::after { background-image:
+    radial-gradient(130% 100% at 50% 45%, transparent 55%, rgba(24,10,12,.52) 100%),
+    linear-gradient(180deg, rgba(24,10,12,.60) 0%, transparent 34%),
+    linear-gradient(0deg,   rgba(24,10,12,.58) 0%, transparent 32%),
+    linear-gradient(270deg, rgba(24,10,12,.58) 0%, transparent 46%); }
+.panel[data-text="center"]::after { background-image:
+    radial-gradient(120% 100% at 50% 50%, rgba(24,10,12,.30) 0%, rgba(24,10,12,.62) 100%),
+    linear-gradient(180deg, rgba(24,10,12,.50) 0%, transparent 30%); }
+
+/* ── Scene content ──────────────────────────────────────────────────── */
+.panel__inner {
+  position: relative;
+  z-index: 60;
+  margin: 9svh var(--pad-x);
+  /* 24ch of Cormorant is narrow; a right-anchored block at that width wraps
+     into a cramped strip against the frame edge (scene 5's Things-to-know
+     wrapped "Sahnewal (LUH), 12 km" across four lines). */
+  max-width: 500px;
+  filter: drop-shadow(0 6px 30px rgba(0, 0, 0, .7));
+}
+/* Prose-width, for reading columns like the family scene. */
+.panel__inner--wide { max-width: min(62ch, 86vw); }
+
+/* Card-carrying scenes need real layout width, not a text measure — 62ch of
+   Cormorant is narrow enough that the functions grid collapses to one column.
+   `justify-self: stretch` is the other half of the fix: the panel's grid uses
+   `place-items: … start`, which shrink-wraps the item to its content width, so
+   a max-width alone leaves the cards in a narrow column. */
+.panel--tall .panel__inner--wide {
+  max-width: min(1080px, 86vw);
+  justify-self: stretch;
+  width: 100%;
+}
+
+.panel[data-text$="right"]  .panel__inner { text-align: right; }
+.panel[data-text="center"]  .panel__inner { text-align: center; }
+
+.eyebrow {
+  font-family: var(--sans);
+  font-size: clamp(.82rem, 1.15vw, .98rem);
+  font-weight: 400;
+  letter-spacing: .3em;
+  text-transform: uppercase;
+  margin-bottom: 1.1rem;
+}
+
+.names {
+  font-size: 40px;
+  font-weight: 600;
+  line-height: .98;
+  letter-spacing: -.01em;
+  text-shadow: 0 4px 40px rgba(0, 0, 0, .7);
+}
+.amp {
+  display: block;
+  font-size: .38em;
+  font-style: italic;
+  margin: .12em 0;
+  font-weight: 400;
+}
+
+.scene-title {
+  font-size: clamp(2rem, 5vw, 3.6rem);
+  font-weight: 600;
+  line-height: 1.05;
+  text-shadow: 0 4px 40px rgba(0, 0, 0, .7);
+}
+
+.date-big {
+  font-size: clamp(1.9rem, 5.4vw, 4rem);
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: .01em;
+  text-shadow: 0 4px 40px rgba(0, 0, 0, .7);
+}
+
+.lede {
+  margin-top: 1.2rem;
+  font-size: clamp(1rem, 1.7vw, 1.45rem);
+  font-style: italic;
+  line-height: 1.5;
+  color: var(--ink-soft);
+  text-shadow: 0 2px 20px rgba(0, 0, 0, .7);
+}
+.lede--story { max-width: 46ch; margin-inline: auto; }
+
+.crest {
+  width: clamp(46px, 6vw, 74px);
+  margin-bottom: 1.4rem;
+  opacity: .92;
+  filter: drop-shadow(0 2px 14px rgba(0, 0, 0, .5));
+}
+.crest--sm { width: clamp(36px, 4.4vw, 54px); }
+.panel[data-text$="right"] .crest { margin-left: auto; }
+.panel[data-text="center"] .crest { margin-inline: auto; }
+
+/* ── Families (scene 2) ─────────────────────────────────────────────── */
+.blessing {
+  font-family: var(--sans);
+  font-size: .95rem;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-bottom: 1.6rem;
+}
+.families {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: clamp(1rem, 4vw, 2.6rem);
+  margin-top: .6rem;
+}
+.family__label {
+  font-family: var(--sans);
+  font-size: .86rem;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: var(--marigold);
+  margin-bottom: .7rem;
+  /* "Gurpreet, daughter of" can run to two lines in a narrow column — break it evenly. */
+  text-wrap: balance;
+}
+.family__name {
+  font-size: clamp(1.05rem, 2.1vw, 1.6rem);
+  line-height: 1.45;
+}
+.family__note {
+  margin-top: .5rem;
+  font-family: var(--sans);
+  font-size: .95rem;
+  font-weight: 300;
+  color: var(--ink-faint);
+  line-height: 1.5;
+}
+.family__sep img {
+  width: clamp(30px, 4vw, 52px);
+  opacity: .85;
+}
+
+/* ── Countdown (scene 3) ────────────────────────────────────────────── */
+.countdown {
+  display: flex;
+  gap: clamp(.9rem, 2.6vw, 2rem);
+  margin-top: 1.8rem;
+}
+.panel[data-text$="right"] .countdown { justify-content: flex-end; }
+.countdown__unit { display: grid; gap: .3rem; text-align: center; }
+.countdown__n {
+  font-size: clamp(1.5rem, 3.4vw, 2.6rem);
+  font-weight: 600;
+  line-height: 1;
+  /* Cormorant defaults to old-style figures, which render "436" with the 3
+     and 6 dropping below the baseline — wrong for a countdown readout. */
+  font-variant-numeric: lining-nums tabular-nums;
+  font-feature-settings: "lnum" 1, "tnum" 1;
+}
+.countdown__l {
+  font-family: var(--sans);
+  font-size: .76rem;
+  font-weight: 300;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* ── Functions (scene 4) ────────────────────────────────────────────── */
+.functions {
+  display: grid;
+  gap: clamp(.9rem, 2vw, 1.3rem);
+  margin-top: 1.8rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
+  text-align: left;
+}
+.fn {
+  background: rgba(26, 12, 14, .48);
+  backdrop-filter: blur(9px);
+  -webkit-backdrop-filter: blur(9px);
+  border: 1px solid rgba(232, 163, 61, .3);
+  border-radius: 3px;
+  padding: clamp(1.1rem, 2.4vw, 1.6rem);
+}
+.fn__name {
+  font-size: clamp(1.25rem, 2.4vw, 1.7rem);
+  font-weight: 600;
+  color: var(--marigold);
+  margin-bottom: .6rem;
+}
+.fn__when {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4rem .9rem;
+  font-family: var(--sans);
+  font-size: .95rem;
+  letter-spacing: .06em;
+  color: var(--ink);
+  margin-bottom: .7rem;
+}
+.fn__time { color: var(--ink-faint); }
+.fn__venue { font-size: 1.02rem; line-height: 1.45; }
+.fn__addr {
+  display: block;
+  font-family: var(--sans);
+  font-size: .95rem;
+  font-weight: 300;
+  color: var(--ink-faint);
+  margin-top: .2rem;
+}
+.fn__meta {
+  margin-top: .7rem;
+  font-family: var(--sans);
+  font-size: .92rem;
+  font-weight: 300;
+  color: var(--ink-soft);
+}
+.fn__meta span {
+  color: var(--marigold);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  font-size: .8rem;
+  margin-right: .4rem;
+}
+.fn__meta--note { font-style: italic; }
+.fn__map {
+  display: inline-block;
+  margin-top: .9rem;
+  font-family: var(--sans);
+  font-size: .86rem;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--marigold);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(232, 163, 61, .45);
+  padding-bottom: .2rem;
+  transition: color .25s, border-color .25s;
+}
+.fn__map:hover, .fn__map:focus-visible { color: var(--ink); border-color: var(--ink); }
+
+/* ── Things to know (scene 5) ───────────────────────────────────────── */
+.know { display: grid; gap: 1rem; margin-top: 1.4rem; }
+.know__row { display: grid; gap: .25rem; }
+.panel[data-text$="right"] .know__row { justify-items: end; }
+.know__k {
+  font-family: var(--sans);
+  font-size: .82rem;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--marigold);
+}
+.know__v { font-size: 1.14rem; line-height: 1.45; color: var(--ink-soft); }
+.know__v a { color: var(--ink); text-decoration: none; border-bottom: 1px solid rgba(251,240,228,.35); }
+
+/* ── Hashtag / Instagram / film (scene 7) ───────────────────────────── */
+/* A wedding hashtag is one unbreakable token, and couples pick long ones.
+   `word-break: break-word` shattered #GurnoorFoundHisSimran into three lines
+   mid-word. Keep it on one line and let it scale down instead: cqi units size
+   it against the container, so a long tag shrinks rather than fragmenting. */
+.hashtag {
+  container-type: inline-size;
+  font-size: clamp(1.15rem, 4.4vw, 3rem);
+  font-weight: 600;
+  color: var(--marigold);
+  line-height: 1.15;
+  text-shadow: 0 4px 40px rgba(0, 0, 0, .7);
+  overflow-wrap: normal;
+  word-break: keep-all;
+  hyphens: none;
+}
+/* Belt and braces: cqi alone still let a long tag overrun the text column,
+   so the element also scales itself down to fit. JS measures the real overflow
+   and sets --fit; CSS multiplies the clamp by it. Falls back gracefully to the
+   clamp above if the script never runs. */
+.hashtag { font-size: calc(clamp(1.15rem, 4.4vw, 3rem) * var(--fit, 1)); }
+
+/* The hashtag needs more room than the 34ch prose column gives it — squeezed
+   there, a 22-character tag shrank to 23px. Widen just the block that carries
+   it. (`width: max-content` is NOT the fix: it makes the box grow with the
+   text, so the fit measurement always reads 1 and the tag overruns instead.) */
+.panel[data-scene="7"] .panel__inner { max-width: min(46ch, 82vw); }
+.film { margin-top: 1.6rem; }
+.film__label {
+  font-family: var(--sans);
+  font-size: .82rem;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-bottom: .7rem;
+}
+.film__frame {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  border: 1px solid rgba(232, 163, 61, .3);
+  border-radius: 3px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, .45);
+}
+.film__frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+
+/* ── Buttons ────────────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: .55rem;
+  margin-top: 1.4rem;
+  padding: .8rem 1.5rem;
+  font-family: var(--sans);
+  font-size: .88rem;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  text-decoration: none;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: background .25s, color .25s, border-color .25s;
+}
+.btn__ico { width: 17px; height: 17px; flex: none; }
+.btn--ghost {
+  color: var(--ink);
+  border: 1px solid rgba(232, 163, 61, .5);
+  background: rgba(26, 12, 14, .35);
+}
+.btn--ghost:hover, .btn--ghost:focus-visible { background: var(--marigold); color: var(--maroon-d); border-color: var(--marigold); }
+.btn--solid {
+  width: 100%;
+  justify-content: center;
+  border: 0;
+  background: var(--marigold);
+  color: var(--maroon-d);
+  font-weight: 500;
+}
+.btn--solid:hover, .btn--solid:focus-visible { background: #F4BC5C; }
+
+/* ── Cards, forms (scene 8) ─────────────────────────────────────────── */
+.card {
+  background: rgba(26, 12, 14, .55);
+  backdrop-filter: blur(11px);
+  -webkit-backdrop-filter: blur(11px);
+  border: 1px solid rgba(232, 163, 61, .28);
+  border-radius: 4px;
+  padding: clamp(1.3rem, 3.4vw, 2.2rem);
+  margin-bottom: clamp(1rem, 2.6vw, 1.6rem);
+  text-align: left;
+}
+
+.closing-card {
+  background: rgba(26, 12, 14, .55);
+  backdrop-filter: blur(11px);
+  -webkit-backdrop-filter: blur(11px);
+  border: 1px solid rgba(232, 163, 61, .28);
+  border-radius: 6px;
+  padding: clamp(1.4rem, 4vw, 2.5rem);
+  text-align: center;
+  box-shadow: 0 18px 46px rgba(11, 6, 8, .28);
+}
+
+.closing-quote {
+  margin: 1.1rem auto 0;
+  max-width: 42rem;
+  font-size: clamp(1.12rem, 2.4vw, 1.65rem);
+  line-height: 1.55;
+  color: var(--ink-soft);
+  font-style: italic;
+}
+
+.closing-line {
+  margin-top: 1.2rem;
+  font-size: clamp(1rem, 1.9vw, 1.2rem);
+  line-height: 1.65;
+  color: var(--ink-soft);
+}
+
+.closing-signoff {
+  margin-top: 1.8rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: .65rem;
+  font-family: var(--serif);
+  font-size: clamp(1.15rem, 2.4vw, 1.7rem);
+  color: var(--marigold);
+}
+
+.closing-signoff__amp {
+  opacity: .8;
+}
+
+.form { margin-top: 1.4rem; display: grid; gap: 1rem; }
+.field { display: grid; gap: .4rem; }
+.field-row { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr)); }
+.field label {
+  font-family: var(--sans);
+  font-size: .82rem;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.field input,
+.field select,
+.field textarea {
+  width: 100%;
+  padding: .72rem .85rem;
+  font-family: var(--sans);
+  font-size: 1rem;             /* 16px — anything smaller makes iOS zoom on focus */
+  color: var(--ink);
+  background: rgba(0, 0, 0, .32);
+  border: 1px solid rgba(232, 163, 61, .28);
+  border-radius: 2px;
+  transition: border-color .2s, background .2s;
+}
+.field textarea { resize: vertical; min-height: 4.5rem; font-family: var(--sans); }
+.field input:focus, .field select:focus, .field textarea:focus {
+  outline: none;
+  border-color: var(--marigold);
+  background: rgba(0, 0, 0, .5);
+}
+.field select { appearance: none; -webkit-appearance: none; cursor: pointer;
+  background-image: linear-gradient(45deg, transparent 50%, var(--marigold) 50%),
+                    linear-gradient(135deg, var(--marigold) 50%, transparent 50%);
+  background-position: calc(100% - 18px) 55%, calc(100% - 13px) 55%;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  padding-right: 2.2rem;
+}
+.field select option { background: var(--maroon-d); color: var(--ink); }
+
+/* The runtime injects one checkbox per ceremony here, and hides the whole
+   node when there's only one function — so it must style from empty. */
+.field--functions:not(:empty) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .6rem 1.2rem;
+  font-family: var(--sans);
+  font-size: .9rem;
+  padding: .3rem 0;
+}
+.field--functions label {
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+  font-size: .9rem;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.field--functions input[type="checkbox"] { accent-color: var(--marigold); width: 1rem; height: 1rem; }
+
+.status {
+  font-family: var(--sans);
+  font-size: .96rem;
+  color: var(--marigold);
+  min-height: 1.2em;
+}
+
+/* ── Wish wall ──────────────────────────────────────────────────────────
+   The runtime builds these nodes; we only supply the styling. */
+.wishwall { margin-top: 1.6rem; display: grid; gap: .8rem; }
+.wishwall:empty { display: none; }
+.aamantran-wish {
+  background: rgba(0, 0, 0, .28);
+  border-left: 2px solid var(--marigold);
+  border-radius: 2px;
+  padding: .9rem 1.1rem;
+  transition: opacity .36s var(--ease);
+}
+/* The wall shows only a few at a time and cycles the rest through; these two
+   states drive that. "View all wishes" is the escape hatch to the full list. */
+.wish-hidden { display: none; }
+.wish-out { opacity: 0; }
+.aamantran-wish-message { font-style: italic; font-size: 1.02rem; line-height: 1.5; color: var(--ink-soft); }
+.aamantran-wish-author {
+  display: block;
+  margin-top: .5rem;
+  font-family: var(--sans);
+  font-size: .85rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--marigold);
+}
+
+/* ── RSVP: ask first, then reveal ────────────────────────────────────────
+   Guests answer yes/no before meeting a form. Panels are toggled with the
+   `hidden` attribute, so the closed states cost nothing if JS never runs —
+   the choice buttons are what render by default. */
+.rsvp-ask {
+  font-family: var(--serif);
+  font-size: clamp(1.1rem, 2.6vw, 1.35rem);
+  color: var(--ink-soft);
+}
+.rsvp-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: .8rem;
+}
+/* .btn--solid is full-width by default; side by side here. justify-content is
+   restated because only .btn--solid centres its own label — .btn--ghost
+   inherits .btn's flex-start, which left-aligned "Sorry, I can't" while the
+   Yes button sat centred. */
+.rsvp-actions .btn {
+  width: auto;
+  flex: 1 1 12rem;
+  margin-top: 1rem;
+  justify-content: center;
+  text-align: center;
+}
+.rsvp-step[hidden], .rsvp-choice[hidden] { display: none; }
+
+.rsvp-miss {
+  font-family: var(--serif);
+  font-size: clamp(1.35rem, 3.4vw, 1.8rem);
+  color: var(--marigold);
+  margin-top: .6rem;
+}
+.rsvp-miss-sub {
+  margin-top: .5rem;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--ink-soft);
+}
+/* Deliberately understated: reversing an answer should be findable, not a
+   second call to action competing with the form's submit button. */
+.rsvp-back {
+  display: inline-block;
+  margin-top: 1.2rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-family: var(--sans);
+  font-size: .82rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  cursor: pointer;
+}
+.rsvp-back:hover, .rsvp-back:focus-visible { color: var(--marigold); }
+
+/* ── View all wishes ─────────────────────────────────────────────────── */
+.wish-viewall {
+  display: block;
+  margin: 1.2rem auto 0;
+  padding: .6rem 1.4rem;
+  border: 1px solid rgba(232, 163, 61, .5);
+  border-radius: 999px;
+  background: transparent;
+  font-family: var(--sans);
+  font-size: .8rem;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--marigold);
+  cursor: pointer;
+}
+.wish-viewall[hidden] { display: none !important; }
+.wish-viewall:hover, .wish-viewall:focus-visible { background: rgba(232, 163, 61, .12); }
+
+/* Above the gate (z-index 200) so it is never trapped behind it. */
+.wishall {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(10, 5, 7, .72);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity .3s var(--ease), visibility .3s;
+}
+.wishall.is-open { opacity: 1; visibility: visible; pointer-events: auto; }
+.wishall__dialog {
+  width: min(640px, 100%);
+  max-height: 86svh;
+  display: flex;
+  flex-direction: column;
+  background: var(--night);
+  border: 1px solid rgba(232, 163, 61, .32);
+  border-radius: 14px 14px 0 0;
+  box-shadow: 0 -14px 44px rgba(0, 0, 0, .55);
+}
+.wishall__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.1rem 1.2rem .8rem;
+  border-bottom: 1px solid rgba(232, 163, 61, .22);
+  flex: none;
+}
+.wishall__title {
+  font-family: var(--serif);
+  font-size: 1.4rem;
+  color: var(--marigold);
+  margin: 0;
+}
+.wishall__close {
+  border: 0;
+  background: none;
+  padding: .2rem;
+  font-family: var(--sans);
+  font-size: .8rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  cursor: pointer;
+}
+.wishall__close:hover, .wishall__close:focus-visible { color: var(--marigold); }
+.wishall__list {
+  overflow-y: auto;
+  display: grid;
+  gap: .8rem;
+  padding: 1rem 1.2rem calc(1.2rem + env(safe-area-inset-bottom));
+}
+@media (min-width: 700px) {
+  .wishall { align-items: center; padding: 4vh 4vw; }
+  .wishall__dialog { border-radius: 10px; max-height: 82svh; }
+  .wishall__list { grid-template-columns: 1fr 1fr; }
+}
+
+/* ── Footer ─────────────────────────────────────────────────────────── */
+.footer { text-align: center; padding-top: clamp(1.6rem, 4vw, 2.6rem); }
+.footer__orn { width: clamp(110px, 22vw, 190px); margin: 0 auto 1.2rem; opacity: .85; }
+.footer__names { font-size: clamp(1.3rem, 3vw, 2rem); font-weight: 600; }
+.footer__date { font-family: var(--sans); font-size: .95rem; letter-spacing: .16em; color: var(--ink-faint); margin-top: .4rem; }
+.footer__mark {
+  margin-top: 1.6rem;
+  font-family: var(--sans);
+  font-size: .8rem;
+  letter-spacing: .14em;
+  color: rgba(251, 240, 228, .4);
+}
+/* Inherits the mark's muted colour so the credit stays a credit, and brightens
+   on hover the same way .fn__map and .know__v a do. */
+.footer__mark a {
+  color: inherit;
+  text-decoration: none;
+  border-bottom: 1px solid currentColor;
+  padding-bottom: .15rem;
+  transition: color .25s;
+}
+.footer__mark a:hover, .footer__mark a:focus-visible { color: var(--ink); }
+
+/* ── Scroll cue ─────────────────────────────────────────────────────── */
+.cue {
+  position: absolute;
+  bottom: 4svh; right: 5vw;
+  z-index: 60;
+  font-family: var(--sans);
+  font-size: .74rem;
+  letter-spacing: .28em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  display: grid;
+  justify-items: center;
+  gap: .6rem;
+  pointer-events: none;
+}
+.cue::after {
+  content: "";
+  width: 1px; height: 32px;
+  background: linear-gradient(var(--ink-faint), transparent);
+  animation: cueDrop 1.8s var(--ease) infinite;
+}
+@keyframes cueDrop {
+  0%   { transform: scaleY(0); transform-origin: top; }
+  50%  { transform: scaleY(1); transform-origin: top; }
+  51%  { transform-origin: bottom; }
+  100% { transform: scaleY(0); transform-origin: bottom; }
+}
+
+/* ── Gate ───────────────────────────────────────────────────────────── */
+.gate {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 8vw;
+  /* Text is nudged toward the right half on desktop, into the open space the
+     shifted artwork leaves. Reset to true centre on phones, where the portrait
+     plate has its own calm middle band. */
+  --gate-shift: 12%;
+  background: var(--night);
+  transition: opacity .8s var(--ease), visibility .8s;
+}
+.gate__art {
+  position: absolute;
+  inset: 0;
+  /* Base layer: shows while the art loads, and carries the gate on its own if
+     the image is ever missing. */
+  background: radial-gradient(120% 120% at 50% 35%, #7A3520 0%, #2E1310 55%, #180A0C 100%);
+  opacity: .95;
+  will-change: transform;
+}
+/* The artwork, faded in once decoded (JS adds .is-ready).
+   Fills the frame (`cover`) and is anchored to the BOTTOM, which drops the
+   seated couple low in the viewport and leaves the upper half for the copy —
+   the same balance the portrait plate gives on phones. `contain` was tried and
+   rejected: it fits the whole plate but letterboxes it, and the dark bands are
+   what read as "unbalanced". */
+.gate__art::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: var(--gate-img, none);
+  background-size: cover;
+  background-position: center 68%;
+  background-repeat: no-repeat;
+  opacity: 0;
+  transition: opacity 1s var(--ease);
+}
+.gate__art.is-ready::after { opacity: 1; }
+/* Scrim: darkest through the middle, where the names and button sit. */
+.gate::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(24, 10, 12, .5) 0%, transparent 22%),
+    linear-gradient(0deg,   rgba(24, 10, 12, .5) 0%, transparent 24%);
+}
+.gate__inner { z-index: 2; }
+/* The copy gets its own translucent card. The artwork has no quiet band wide
+   enough for this much text, so rather than fighting the composition the card
+   supplies its own ground — the couple reads clearly behind and beside it. */
+.gate__inner {
+  position: relative;
+  z-index: 1;
+  transform: translateX(var(--gate-shift, 0));
+  padding: clamp(2.4rem, 5vw, 4rem) clamp(2.4rem, 6vw, 5rem);
+  /* The landscape plate is composed for this layout — couple small and low in
+     the left third, open hazy hall across the upper centre and right — so the
+     copy sits slightly right of centre in that clear space, no longer pushed
+     up and out of the way. */
+  margin-bottom: 0;
+}
+/* A soft radial pool rather than a hard card: it darkens just enough behind the
+   words and dissolves completely at the edges, so the ceremony still reads as
+   one continuous image. A visible panel cut the artwork in half. */
+.gate__inner::before {
+  content: "";
+  position: absolute;
+  inset: -16% -22%;
+  z-index: -1;
+  background: radial-gradient(62% 58% at 50% 50%,
+    rgba(22, 9, 11, .52) 0%,
+    rgba(22, 9, 11, .34) 46%,
+    rgba(22, 9, 11, .14) 74%,
+    transparent 100%);
+}
+.gate__mark { width: clamp(52px, 8vw, 88px); margin: 0 auto 1.6rem; opacity: .9; }
+.gate__eyebrow {
+  font-family: var(--sans);
+  font-size: clamp(.8rem, 1.15vw, .94rem);
+  letter-spacing: .28em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-bottom: 1.2rem;
+}
+.gate__names { font-size: clamp(2.4rem, 8vw, 5.4rem); font-weight: 600; line-height: 1; }
+.gate__amp { display: block; font-size: .34em; font-style: italic; color: var(--marigold); margin: .14em 0; font-weight: 400; }
+.gate__date {
+  margin-top: 1.2rem;
+  font-family: var(--sans);
+  font-size: .96rem;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.gate__btn {
+  margin-top: 2.4rem;
+  padding: .9rem 2rem;
+  font-family: var(--sans);
+  font-size: .88rem;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--maroon-d);
+  background: var(--marigold);
+  border: 0;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: background .25s, transform .25s;
+}
+.gate__btn:hover, .gate__btn:focus-visible { background: #F4BC5C; transform: translateY(-2px); }
+.gate.is-open { opacity: 0; visibility: hidden; pointer-events: none; }
+
+/* ── Music toggle ───────────────────────────────────────────────────── */
+.music {
+  position: fixed;
+  right: 4vw; bottom: 3.4svh;
+  z-index: 150;
+  width: 44px; height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid rgba(232, 163, 61, .45);
+  background: rgba(26, 12, 14, .6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: var(--marigold);
+  cursor: pointer;
+  transition: background .25s, transform .25s;
+}
+.music:hover, .music:focus-visible { background: rgba(26, 12, 14, .85); transform: scale(1.06); }
+.music__on { width: 19px; height: 19px; }
+.music__bars { display: none; align-items: flex-end; gap: 2px; height: 15px; }
+.music__bars i { width: 2px; background: var(--marigold); animation: bars .9s ease-in-out infinite; }
+.music__bars i:nth-child(1) { height: 40%; animation-delay: -.2s; }
+.music__bars i:nth-child(2) { height: 90%; animation-delay: -.5s; }
+.music__bars i:nth-child(3) { height: 60%; animation-delay: -.8s; }
+@keyframes bars { 0%, 100% { transform: scaleY(.4); } 50% { transform: scaleY(1); } }
+.music.is-playing .music__on { display: none; }
+.music.is-playing .music__bars { display: flex; }
+
+/* ══════════════════════════════════════════════════════════════════════
+   TABLET — the 16:9 art still fits, only the type and spacing tighten.
+   ═════════════════════════════════════════════════════════════════════ */
+@media (max-width: 1024px) {
+  :root { --pad-x: 7vw; }
+
+  /* A tablet is NOT a narrow desktop. The plates are drawn 16:9; an iPad is
+     ~4:3, so `cover` scales them up and crops the sides — which lifts every
+     foreground band (the mustard hedge, the grass) far higher up the frame
+     than it sits on a wide screen. Figures kept at their desktop height then
+     sink behind that band, reading as if they stand behind the foliage.
+     Fix is two-part — grow the figures so they clear the raised horizon, and
+     hold the foreground plates down where they were drawn. */
+  .layer.el.fig-center { left: 12%; right: 12%; height: 106%; }
+  .layer.el.fig-left   { left: 4%;  width: 68%; height: 132%; }
+  .layer.el.fig-right  { right: -2%; width: 66%; height: 132%; }
+
+  /* `.panel--tall .layer.el.fig-center` (3 classes) outranks the 2-class rule
+     above no matter the source order, so scene 4's dancers kept their DESKTOP
+     size on every screen, so scene 4's cutouts rendered far too small.
+     Matching that specificity is what actually makes the breakpoint apply. */
+  .panel--tall .layer.el.fig-center {
+    left: auto; right: -6%;
+    width: 82%;
+    height: 104%;
+  }
+  .layer.el.fig-cl     { left: 0%;  width: 64%; height: 112%; }
+  .layer.el.fig-cr     { right: 2%; width: 68%; height: 120%; }
+  .layer.el.fig-seated { left: 16%; right: 16%; height: 84%; }
+
+  /* Anchor the foreground band to the bottom of the frame instead of letting
+     `cover` float it up the taller viewport. `100% auto` scales it by width,
+     so the hedge keeps its drawn thickness and stays a base, not a wall. */
+  .layer.el.fill:not(.glow) {
+    inset: auto 0 -4% 0;
+    height: 62%;
+    background-size: 100% auto;
+    background-position: center bottom;
+  }
+
+  /* The hanging band is drawn as a top frame. It also needs headroom ABOVE the
+     frame to drift into — anchored flush at `top: 0` the idle motion just
+     slides it under its own mask and the lights look frozen. */
+  .layer.el.toplights {
+    inset: -10% 0 auto 0;
+    height: 52%;
+    background-size: 112% auto;
+  }
+
+  /* Scene 5's hands are framed tighter so they don't crowd the copy below. */
+  .layer.el.hands { inset: 5% 16% 30% 16%; }
+
+  /* The finale couple is deliberately small; on 4:3 it needs a touch more
+     size or it reads as a speck against the raised grass line. */
+  .panel--finale .layer.el.fig-seated { left: 26%; right: 26%; height: 48%; }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   TABLET PORTRAIT — an iPad held upright is closer to a phone's framing
+   than a desktop's, but it is wider than the 720px mobile breakpoint so it
+   was falling through every mobile rule. It gets the portrait plates (see
+   script.js TABLET_PORTRAIT_Q) and centred, roomier text.
+   ═════════════════════════════════════════════════════════════════════ */
+@media (min-width: 721px) and (max-width: 1024px) and (orientation: portrait) {
+  /* Portrait art is composed for the frame — drop the wide overscan. */
+  .layer { inset: -6%; }
+
+  .panel__inner { max-width: min(52ch, 78vw); }
+  .panel__inner--wide { max-width: min(680px, 82vw); }
+
+  /* Figures against a 9:16-ish plate: sized to the figure, not the frame. */
+  .layer.el.fig-left   { left: 0%;  width: 82%; height: 124%; }
+  .layer.el.fig-right  { right: -4%; width: 80%; height: 122%; }
+  .layer.el.fig-center { left: 2%;  right: 2%;  height: 112%; }
+  .panel--tall .layer.el.fig-center {
+    left: auto; right: -8%;
+    width: 90%;
+    height: 108%;
+  }
+  .layer.el.fig-cl     { left: -2%; width: 72%; height: 108%; }
+  .layer.el.fig-cr     { right: 0%; width: 74%; height: 112%; }
+  .layer.el.fig-seated { left: 12%; right: 12%; height: 80%; }
+  .layer.el.hands      { inset: 8% 8% 24% 8%; }
+
+  .layer.el.fill:not(.glow) { height: 54%; }
+  .layer.el.toplights {
+    inset: -12% 0 auto 0;
+    height: 58%;
+    background-size: 120% auto;
+  }
+
+  /* Cards get the full column on a portrait tablet. */
+  .functions { grid-template-columns: 1fr 1fr; }
+  .families  { gap: 2rem; }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   MOBILE — portrait.
+   The 16:9 backgrounds get cropped to uselessness on a 9:16 screen, so
+   JS swaps in the `-p` portrait plates here (see script.js pickBackground).
+   Cutouts stay the same PNGs but are re-anchored tighter and centred, since
+   the art brief keeps every face inside the middle 60%.
+   ═════════════════════════════════════════════════════════════════════ */
+@media (max-width: 720px) {
+  :root { --pad-x: 7vw; }
+
+  .panel__inner { margin: 7svh var(--pad-x); max-width: 88vw; }
+  .panel__inner--wide { max-width: 88vw; }
+
+  /* On a narrow screen a right-aligned column reads badly — everything
+     goes left, except the deliberately centred family scene. */
+  .panel[data-text$="right"] .panel__inner,
+  .panel[data-text$="right"] .know__row { text-align: left; justify-items: start; }
+  .panel[data-text$="right"] .countdown { justify-content: flex-start; }
+  .panel[data-text$="right"] .crest { margin-left: 0; }
+  .panel[data-text$="right"] { place-items: start start; }
+  .panel[data-text="bottom-right"] { place-items: end start; }
+
+  /* Scene 7 on a phone: the couple is bottom-anchored and the copy was too, so
+     the card landed across their faces while a large empty sky sat unused
+     above. Pull the block to the TOP of the scene — the art then reads in full
+     underneath it, and the sky is doing something. Scene 5 keeps the bottom
+     anchor: its art is a pair of hands high in the frame, so the opposite. */
+  .panel[data-scene="7"] { place-items: start start; }
+  .panel[data-scene="7"] .panel__inner { margin-top: 2svh; margin-bottom: 0; }
+
+  /* Scene 4 carries the function cards and was anchored bottom-left, which put
+     the whole stack low and left the top of the scene empty. Both tall scenes
+     now start their copy at the top, so the art below them reads. */
+  .panel[data-scene="4"] { place-items: start start; }
+  .panel[data-scene="4"] .panel__inner { margin-top: 2svh; margin-bottom: 0; }
+
+  /* MEASURED: `.panel--tall { padding: 14svh 0 }` = 118px on an 844px phone,
+     and that padding — not the card's own 17px margin — was the whole of the
+     135px of empty sky above the card. The padding was
+     there to keep long content off the viewport edges back when the copy was
+     vertically centred; now that both tall scenes anchor their card to the TOP
+     it is dead space. Trim it hard at the top and keep a little at the bottom,
+     where scene 4's cards still need to clear the end of the panel. */
+  .panel--tall { padding: 3svh 0 8svh; }
+
+  /* Both cards a little smaller: tighter type, tighter padding, and a narrower
+     column so the artwork keeps more of the frame. */
+  .panel[data-scene="4"] .panel__inner,
+  .panel[data-scene="7"] .panel__inner {
+    max-width: 80vw;
+    padding: 1.05rem .95rem;
+  }
+  .panel[data-scene="4"] .eyebrow,
+  .panel[data-scene="7"] .eyebrow { font-size: .66rem; letter-spacing: .2em; }
+  .panel[data-scene="4"] .scene-title,
+  .panel[data-scene="7"] .scene-title { font-size: 1.62rem; }
+  /* Keep the `--fit` multiplier that fitText() sets in script.js — a plain
+     font-size here would drop it and let a long tag overrun its column. */
+  .panel[data-scene="7"] .hashtag { font-size: calc(clamp(1rem, 3.6vw, 2.2rem) * var(--fit, 1)); }
+  .panel[data-scene="4"] .lede,
+  .panel[data-scene="7"] .lede { font-size: .84rem; }
+  .panel[data-scene="7"] .btn { margin-top: 1rem; padding: .66rem 1.1rem; font-size: .78rem; }
+  .panel[data-scene="7"] .film__label { font-size: .72rem; margin-bottom: .45rem; }
+
+  /* The function cards themselves — the bulk of scene 4's height. */
+  .panel[data-scene="4"] .functions { gap: .8rem; }
+  .panel[data-scene="4"] .fn { padding: .85rem .8rem; }
+  .panel[data-scene="4"] .fn__name { font-size: 1.06rem; }
+  .panel[data-scene="4"] .fn__when,
+  .panel[data-scene="4"] .fn__meta span,
+  .panel[data-scene="4"] .fn__map { font-size: .8rem; }
+
+  /* The film frame is the whole problem here. At `aspect-ratio: 16/9` across a
+     full-width phone column it renders ~190px tall — and it is the LAST thing
+     in the card, so it drags the card's bottom edge straight down over the
+     couple. (A headless screenshot hides this: the embed never loads and the
+     frame collapses to ~42px, which is why this looked fixed when it wasn't.)
+     Constraining the video's width caps the card height at a known value and
+     keeps it clear of the art below. */
+  /* The film embed's height is the one thing this scene cannot predict — the
+     iframe reports 0 until YouTube loads, then jumps to a real 16:9 box, and
+     it is the LAST element in the card, so its growth pushes the card's bottom
+     edge down over the couple. Rather than guess the number, cap the card and
+     let the video scroll inside it: the art below is then safe at ANY embed
+     height, which is what makes this hold in Safari and not just in a
+     screenshot where the iframe never loaded. */
+  .panel[data-scene="7"] .panel__inner {
+    max-height: 46svh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+  .panel[data-scene="7"] .film { margin-top: .9rem; }
+  /* Keep the video a sensible size inside the capped card. */
+  .panel[data-scene="7"] .film__frame { max-width: 230px; }
+
+  /* MEASURED: 02-couple-close.webp is 1536x1024 with the pair CENTRED in the
+     middle ~40% — so `contain` fits all that empty canvas and renders them
+     tiny. Scaling past the box width fills the space the text just vacated.
+     This plate is centred (unlike scene 4's, whose couple sits right), so it
+     stays centred and only grows. */
+
+  /* Portrait art is composed for the frame, so drop the wide overscan. */
+  .layer { inset: -6%; }
+
+  /* ALPHA-MEASURED from 02-couple-close.webp: the couple fills 1.2%-98.1% of
+     the plate's HEIGHT (their heads are at the very top edge, no transparent
+     padding to absorb an overlap) and sits at 15.8%-52.5% across, i.e. LEFT of
+     centre, not centred.
+
+     Two consequences, both of which bit earlier attempts:
+      - the box's top edge IS the top of their heads, so the box has to start
+        below the card, not merely end below it;
+      - `center` x-position pushes them right, so the plate is nudged left to
+        put the pair under the open sky rather than behind the copy. */
+  .panel--tall .panel[data-scene="7"] .layer.el.fig-center,
+  .panel[data-scene="7"] .layer.el.fig-center {
+    /* The card's height is a FIXED PIXEL quantity (text block ~260px + a
+       16:9 film frame + padding) — it does NOT scale with the screen. So an
+       `svh` offset is the wrong tool: 64svh clears the card on a 844px phone
+       but lands 20px INSIDE it on a 667px iPhone SE. Positioning from a fixed
+       pixel budget instead makes the clearance identical on every handset.
+
+       Budget: 2svh top margin + ~260px copy + 129px film (230px wide @16:9)
+       + ~45px padding => card ends ~451px; +28px breathing room. */
+    /* Re-measured after trimming .panel--tall's 14svh top padding: the card now
+       ends at ~298px on an 844 screen (was 391). The offset is measured from
+       the panel's padded top edge, so it tracks the card rather than the
+       viewport — 292px puts the art just under it on every handset. */
+    top: 292px; bottom: 0;
+    left: -4%; right: -4%;
+    width: auto;
+    height: auto;
+    /* `auto 100%` filled the whole band and rendered the couple oversized,
+       running past the bottom edge. Stepped down to 78%, then a further 30%
+       by design => 55% of the band height. */
+    background-size: auto 55%;
+    background-position: 38% bottom;
+  }
+
+  /* Figures on a phone. These are deliberately LARGE: a 9:16 screen is narrow,
+     and a cutout scaled to "fit" reads as a tiny distant speck. Overflowing the
+     sides is fine — the feather masks handle the edges — so size them to the
+     figure, not to the frame. */
+  .layer.el.fig-left   { left: -18%; width: 132%; height: 118%; bottom: 2%; }
+  .layer.el.fig-right  { right: -18%; width: 130%; height: 116%; bottom: 2%; }
+  .layer.el.fig-center { left: -16%; right: -16%; height: 120%; }
+
+  /* The string lights are anchored `inset: 0 0 auto 0` and the idle drift moves
+     a layer UP, so on a phone the band slid up under its own mask fade and the
+     motion vanished — "in mobile the lights are not moving". Start the band
+     slightly above the frame and make it taller: now there is art above the
+     top edge to travel INTO, so the drift reads instead of disappearing.
+     The mask is pushed down to match, otherwise the fade eats the new height. */
+  /* CRITICAL: svh, NOT %. A percentage inset resolves against the PANEL, and a
+     tall panel is ~1600px on a phone — measured, the band sat 308px above the
+     viewport with a third of it off-screen, which is why the lights looked
+     frozen. Viewport units anchor it to what the guest can actually see. */
+  .layer.el.toplights {
+    inset: -4svh 0 auto 0;
+    height: 34svh;
+    background-size: 132% auto;
+    background-position: center top;
+    -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 72%, transparent 98%);
+            mask-image: linear-gradient(180deg, #000 0%, #000 72%, transparent 98%);
+  }
+  /* Scene 4 again — without matching the 3-class selector the dancers stay at
+     the desktop 62%/88% and read as a distant speck on a phone.
+
+     Same svh lesson as the lights: a height of 104% of a ~1600px TALL PANEL
+     drew the couple 1659px high with most of it above the frame. Pinning to
+     the bottom in svh puts them beside the function cards, where the scene
+     has its empty space, at a size that actually reads. */
+  /* MEASURED: 02-couple-dance.webp is 1536x1024 — a LANDSCAPE 3:2 plate, not
+     the portrait canvas the earlier rules assumed. That is the whole story of
+     "the cutout is small": inside a 390px-wide phone column, `contain` fits it
+     by WIDTH and the couple ends up ~280px tall with the figures a fraction of
+     that. Scaling by width (`auto` height via background-size: <w> auto) and
+     overflowing the sides is what makes them read at phone size. */
+  /* INSPECTED THE PLATE: 1536x1024, and the dancers occupy roughly the RIGHT
+     60% of it — the left third is empty transparency. That is why every
+     "centred" value looked wrong: centring the CANVAS pushes the figures
+     off-frame and crops them. `contain` keeps the pair whole, and anchoring
+     right-bottom drops them into the empty right side of the scene beside the
+     cards, at full height. */
+  .panel--tall .layer.el.fig-center {
+    top: auto; bottom: 0;
+    left: auto; right: -14%;
+    width: 96%;
+    height: 44svh;
+    background-size: contain;
+    background-position: right bottom;
+  }
+  .layer.el.fig-seated { left: -4%; right: -4%; height: 76%; }
+  .layer.el.fig-cl     { left: -8%; width: 112%; height: 100%; }
+  .layer.el.fig-cr     { right: -8%; width: 114%; height: 104%; }
+  .layer.el.hands      { inset: 10% -6% 18% -6%; }
+
+  /* Tall scenes carry long copy, so their art was knocked back to .34 to keep
+     the text readable. That went too far: at a third opacity the scene-7 couple
+     and the scene-4 string lights all but vanished, and the motion on them went
+     with it, leaving the section looking empty and static.
+     The art comes back up near full; readability is handled by the
+     panel scrim and the copy's own backdrop instead of by erasing the artwork.
+
+     The figure stays a little lower than the decorative layers because it sits
+     directly behind the text column, while the lights and arch frame the edges
+     and can run bright. */
+  .panel--tall .layer.el.is-ready { opacity: .9; }
+  .panel--tall .layer.el.fig-seated.is-ready { opacity: .72; }
+  /* Scene 4's dancers now sit low beside the cards rather than behind the text
+     column, so they carry the scene and are held brighter than the .72 that
+     suits a figure directly under copy. */
+  .panel--tall .layer.el.fig-center.is-ready { opacity: .9; }
+  .panel--tall .layer.el.toplights.is-ready,
+  .panel--tall .layer.el.branch.is-ready { opacity: 1; }
+  .panel--tall .layer.el.glow.is-ready { opacity: .6; }
+
+  /* A tall panel is ~1600px on an 844px phone, so its middle third — exactly
+     where the function cards sit — has NO art: the lights are above it and
+     the figures below. That band read as empty even after the cutouts were
+     fixed. The sparkle accent is
+     repeated down the panel at a phone-sized tile so the card region keeps
+     some life behind it, instead of being flat tint. */
+  .panel--tall .layer.el.glow {
+    inset: 0;
+    background-size: 100% 46svh;
+    background-repeat: repeat-y;
+    background-position: center top;
+  }
+
+  /* With the art back up, the copy on a tall scene needs its own ground so it
+     never competes with a bright plate behind it. */
+  .panel--tall .panel__inner {
+    background: linear-gradient(180deg, rgba(24, 10, 12, .34) 0%, rgba(24, 10, 12, .5) 100%);
+    padding: 1.4rem 1.1rem;
+    border-radius: 14px;
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+  }
+
+
+  /* A phone gives type far less room to dodge a bright spot in the art, and
+     the portrait plates put their brightest area dead centre — which is
+     exactly where the text column sits. So the scrim goes deeper here than on
+     desktop, and runs the full height rather than only the edges. Without
+     this, marigold text (the hashtag especially) disappears into a glow. */
+  .panel::after,
+  .panel[data-text$="left"]::after,
+  .panel[data-text$="right"]::after,
+  .panel[data-text="center"]::after {
+    background-image:
+      radial-gradient(120% 90% at 50% 50%, transparent 0%, rgba(24, 10, 12, .40) 100%),
+      linear-gradient(180deg, rgba(24, 10, 12, .62) 0%, rgba(24, 10, 12, .18) 38%,
+                              rgba(24, 10, 12, .30) 68%, rgba(24, 10, 12, .72) 100%);
+  }
+  /* The full-panel scrim below was tuned for art at .34 opacity. Now that the
+     copy carries its own ground, stacking both crushes the scene to mud — so
+     tall panels get a lighter scrim and let the artwork through. */
+  .panel--tall::after,
+  .panel--tall[data-text$="left"]::after,
+  .panel--tall[data-text$="right"]::after {
+    background-image:
+      radial-gradient(130% 100% at 50% 42%, transparent 0%, rgba(24, 10, 12, .26) 100%),
+      linear-gradient(180deg, rgba(24, 10, 12, .5) 0%, rgba(24, 10, 12, .06) 34%,
+                              rgba(24, 10, 12, .14) 62%, rgba(24, 10, 12, .58) 100%);
+  }
+
+  /* Ceremony details are centred on phones — a single narrow
+     column reads better centred than left-ragged. */
+  .functions { text-align: center; }
+  .fn__when  { justify-content: center; }
+  .fn__meta span { display: block; margin: 0 0 .2rem; }
+  .fn__map { margin-inline: auto; }
+
+  .families { grid-template-columns: 1fr; gap: 1.6rem; }
+  .family__sep { justify-self: center; }
+  .family__sep img { width: 34px; }
+
+  .countdown { gap: 1.1rem; }
+  .functions { grid-template-columns: 1fr; }
+  .field-row { grid-template-columns: 1fr; }
+
+  /* Gate on a phone: the art puts the couple low and the palki high, so the
+     text block sits in the calm middle band. Pull it up slightly so the button
+     clears the groom's turban, and keep the eyebrow on one line. */
+  .gate { padding: 6vw; align-content: center; --gate-shift: 0%; }
+  .gate__inner { transform: translateY(-4svh); margin-bottom: 0; }
+  /* Desktop uses `contain` (the landscape plate is wider than the viewport and
+     has no quiet band for text). The portrait plate is 9:16 like the screen, so
+     it fills properly with `cover` — `contain` would letterbox it. */
+  .gate__art::after { background-size: cover; background-position: center; }
+  .gate::before {
+    background:
+      radial-gradient(86% 46% at 50% 50%, rgba(24, 10, 12, .78) 0%, rgba(24, 10, 12, .36) 64%, transparent 100%),
+      linear-gradient(180deg, rgba(24, 10, 12, .5) 0%, transparent 24%),
+      linear-gradient(0deg,   rgba(24, 10, 12, .5) 0%, transparent 26%);
+  }
+  .gate__eyebrow { font-size: .74rem; letter-spacing: .2em; max-width: 26ch; margin-inline: auto; }
+  .gate__mark { width: 44px; margin-bottom: 1.1rem; }
+  .gate__btn { margin-top: 1.8rem; }
+
+  .cue { right: auto; left: var(--pad-x); }
+  .music { right: 5vw; bottom: 2.6svh; }
+}
+
+/* Very short landscape phones — the scene text would otherwise overflow. */
+@media (max-height: 520px) and (orientation: landscape) {
+  .panel { min-height: 640px; }
+  .panel__inner { margin: 6svh var(--pad-x); }
+}
+
+/* ── Reduced motion ─────────────────────────────────────────────────────
+   Kill the idle drift and the cue; scroll parallax and reveals are handled
+   in JS, which reads the same query. */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .scroller { scroll-behavior: auto; }
+  .cue::after { animation: none; }
+  .music__bars i { animation: none; }
+  .layer { transition: none; }
+}
+
+/* ── Print ──────────────────────────────────────────────────────────────
+   Guests do print these. Give them a plain readable document. */
+@media print {
+  body { overflow: visible; background: #fff; color: #1a1a1a; }
+  .scroller { height: auto; overflow: visible; }
+  .gate, .music, .cue, .layer, .panel::after, .film { display: none !important; }
+  .panel { min-height: auto; page-break-inside: avoid; padding: 1.5rem 0; background: none !important; }
+  .panel__inner { margin: 0; max-width: 100%; filter: none; }
+  .eyebrow, .family__label, .know__k, .fn__name, .amp, .hashtag { color: #8a5a12; }
+  .lede, .know__v, .fn__addr, .family__note { color: #444; }
+  .card, .fn { border-color: #ccc; background: none; backdrop-filter: none; }
+  .form, .status, .btn { display: none !important; }
+}

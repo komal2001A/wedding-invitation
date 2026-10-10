@@ -1,0 +1,718 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Gurkomal Kaur &amp; Amanpreet Singh — Wedding Invitation</title>
+<link rel="stylesheet" href="./styles.css" />
+<script>
+  if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+  window.scrollTo(0, 0);
+</script>
+</head>
+<body>
+
+<div class="language-switch" role="group" aria-label="Choose language">
+  <button type="button" id="language-en" aria-pressed="true">EN</button>
+  <button type="button" id="language-pa" aria-pressed="false">ਪੰਜਾਬੀ</button>
+</div>
+
+<!-- Values JS needs, passed through the DOM (never through an inline script —
+     see guide.md §3 rule 3). -->
+<div id="js-data"
+     data-date="2026-11-21"
+     data-person1="Gurkomal Kaur"
+     data-person2="Amanpreet Singh"
+     hidden></div>
+
+<!-- Tap-to-enter cover. One-time; JS removes it and starts the music. -->
+<div class="gate" id="gate">
+  <div class="gate__art" aria-hidden="true" style="background-image:url('./images/open_invitation.png'); background-size:cover; background-position:center; background-repeat:no-repeat;"
+       data-bg="./images/open_invitation.png" data-bg-p="./images/open_invitation_gate-p.png"></div>
+  <style>
+    @media (max-width: 767px) {
+      .gate__art {
+        background-image: url('./images/open_invitation_gate-p.png') !important;
+      }
+    }
+  </style>
+  <div class="gate__inner">
+    <p class="gate__eyebrow">You are invited to the wedding of</p>
+    <h1 class="gate__names">Gurkomal Kaur<span class="gate__amp">&amp;</span>Amanpreet Singh</h1>
+    <p class="gate__date">21-11-2026</p>
+    <button class="gate__btn" id="gate-btn" type="button">Open the invitation</button>
+  </div>
+</div>
+
+<main class="scroller" id="scroller">
+
+  <!-- ══════════ SCENE 1 — The Sarson Field · couple names ══════════ -->
+  <section class="panel" data-scene="1" data-text="top-left" data-tint="warm">
+    <div class="layer bg"          data-depth="0" data-bg="./images/section_one_bg.png" data-bg-p="./images/section_one_bg.png" style="background-image:url('./images/section_one_bg.png'); background-size:cover; background-position:center; background-repeat:no-repeat;"></div>
+    <div class="layer el fig-left" data-depth="16" data-src="./images/section_one_her.png" style="background-image:url('./images/section_one_her.png'); background-size:contain; background-position:center bottom; background-repeat:no-repeat; width:38%; height:78%; left:8%; bottom:0; transform:scale(1.05);"></div>
+    <div class="layer el fig-right" data-depth="20" data-src="./images/section_one_him.png" style="background-image:url('./images/section_one_him.png'); background-size:contain; background-position:center bottom; background-repeat:no-repeat; width:38%; height:78%; right:8%; bottom:0; transform:scale(1.05);"></div>
+    <div class="layer el fill"     data-depth="30" data-src="./images/section_one_mustard_fg.png" style="background-image:url('./images/section_one_mustard_fg.png'); background-size:cover; background-position:center; background-repeat:no-repeat;"></div>
+
+    <div class="panel__inner" style="position: relative; z-index: 10;">
+      <div class="crest" aria-hidden="true"></div>
+      <p class="eyebrow" style="position: relative; z-index: 12; text-shadow: 0 2px 12px rgba(0,0,0,0.38);">With the blessings of Waheguru</p>
+      <h1 class="names" style="position: relative; z-index: 12; text-shadow: 0 2px 12px rgba(0,0,0,0.38);">
+        Gurkomal Kaur
+        <span class="amp">&amp;</span>
+        Amanpreet Singh
+      </h1>
+        <p class="lede" style="position: relative; z-index: 12; text-shadow: 0 2px 12px rgba(0,0,0,0.38);">are getting married</p>
+    </div>
+    <div class="cue" aria-hidden="true">Scroll</div>
+  </section>
+
+  <!-- ══════════ SCENE 2 — Phulkari · the families ══════════ -->
+  <section class="panel" data-scene="2" data-text="center" data-tint="warm">
+    <div class="layer bg"           data-depth="0" data-bg="./images/section_two_bg.png" data-bg-p="./images/section_two_bg.png" style="background-image:url('./images/section_two_bg.png'); background-size:cover; background-position:center; background-repeat:no-repeat;"></div>
+    <div class="layer el toplights" data-depth="24" data-src="./images/section_two_animated_top.png" style="background-image:url('./images/section_two_animated_top.png'); background-size:cover; background-position:center; background-repeat:no-repeat;"></div>
+    <div class="layer el fill glow" data-depth="8"  data-src="./images/section_two_animated_top.png" style="background-image:url('./images/section_two_animated_top.png'); background-size:cover; background-position:center; background-repeat:no-repeat;"></div>
+
+    <div class="panel__inner panel__inner--wide">
+      <p class="eyebrow">Together with our families</p>
+
+
+      <!-- Each label says whose parents follow: "Son of" / "Daughter of" once the
+           couple has picked Groom/Bride for that name (the template's role
+           options) and a parent is named; "Jasleen’s parents" otherwise.
+           script.js keeps data-relation, else trims the name to the first one. -->
+      <div class="families">
+        <div class="family">
+          <p class="family__label" data-who="person1" data-relation="Son of">Son of</p>
+          <p class="family__name">S. Gurnam Singh</p>
+          <p class="family__name">Sdn. Sukhwinder Kaur</p>
+        </div>
+
+        <div class="family__sep" aria-hidden="true"></div>
+
+        <div class="family">
+          <p class="family__label" data-who="person2" data-relation="Daughter of">Daughter of</p>
+          <p class="family__name">S. Gurdev Singh</p>
+          <p class="family__name">Sdn. Daljit Kaur</p>
+        </div>
+      </div>
+
+        <p class="lede lede--story">We are both so grateful that you will stand beside us as we take our first steps together. The love shown to us by so many since our kurmai has moved us more than we can say, and we have felt every prayer. We would like to thank everyone most sincerely for their warmth and their blessings. We look forward to seeing you before Guru Sahib, and to celebrating with you after.</p>
+    </div>
+  </section>
+
+  <!-- ══════════ SCENE 3 — Twilight · the date + countdown ══════════ -->
+  <section class="panel" data-scene="3" data-text="top-right" data-tint="cool">
+    <div class="layer bg"            data-depth="0" data-bg="./images/section_three_bg.png" data-bg-p="./images/section_three_bg.png" style="background-image:url('./images/section_three_bg.png'); background-size:cover; background-position:center; background-repeat:no-repeat;"></div>
+    <div class="layer el fill glow"  data-depth="7"  data-src="./images/section_three_animated_tree.png" style="background-image:url('./images/section_three_animated_tree.png'); background-size:cover; background-position:center; background-repeat:no-repeat;"></div>
+    <div class="layer el fig-center" data-depth="16" data-src="./images/section_three_boygirlsitting.png" style="background-image:url('./images/section_three_boygirlsitting.png'); background-size:cover; background-position:center; background-repeat:no-repeat;"></div>
+    <div class="layer el branch"     data-depth="26" data-src="./images/section_three_animated_tree.png" style="background-image:url('./images/section_three_animated_tree.png'); background-size:cover; background-position:center; background-repeat:no-repeat;"></div>
+
+    <div class="panel__inner">
+      <p class="eyebrow">Save the date</p>
+        <h2 class="date-big">21-11-2026</h2>
+      <p class="lede" data-venue-slot>Anand Karaj</p>
+
+      <!-- Countdown updates from the visitor's local clock. -->
+      <div class="countdown" id="countdown" hidden>
+        <div class="countdown__unit"><span class="countdown__n" data-cd="months">0</span><span class="countdown__l">months</span></div>
+        <div class="countdown__unit"><span class="countdown__n" data-cd="days">0</span><span class="countdown__l">days</span></div>
+        <div class="countdown__unit"><span class="countdown__n" data-cd="hours">0</span><span class="countdown__l">hrs</span></div>
+        <div class="countdown__unit"><span class="countdown__n" data-cd="mins">0</span><span class="countdown__l">min</span></div>
+        <div class="countdown__unit"><span class="countdown__n" data-cd="secs">0</span><span class="countdown__l">sec</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════ SCENE 4 — Sangeet · the functions ══════════ -->
+  <section class="panel panel--tall" data-scene="4" data-text="bottom-left" data-tint="warm">
+    <div class="layer bg"            data-depth="0" data-bg="./images/section_four_bg.png" data-bg-p="./images/section_four_bg.png" style="background-image:url('./images/section_four_bg.png'); background-size:cover; background-position:center; background-repeat:no-repeat;"></div>
+    <div class="layer el fill glow"  data-depth="6"  data-src="./images/section_four_sparkle.png" style="background-image:url('./images/section_four_sparkle.png'); background-size:cover; background-position:center; background-repeat:no-repeat;"></div>
+    <div class="layer el fig-center" data-depth="16" data-src="./images/section_four_couple_dance.png" style="background-image:url('./images/section_four_couple_dance.png'); background-size:cover; background-position:center; background-repeat:no-repeat;"></div>
+    <div class="layer el toplights"  data-depth="24" data-src="./images/section_four_stringlights.png" style="background-image:url('./images/section_four_stringlights.png'); background-size:cover; background-position:center; background-repeat:no-repeat;"></div>
+
+    <div class="panel__inner panel__inner--wide">
+      <p class="eyebrow">The celebrations</p>
+      <h2 class="scene-title">Join us</h2>
+
+      <div class="functions">
+          <article class="fn" data-fn-name="Sukhmani Sahib" data-fn-venue-name="Venue to be confirmed">
+            <h3 class="fn__name">Sukhmani Sahib</h3>
+            <div class="fn__when">
+              <span class="fn__date">10-11-2026</span>
+              <span class="fn__time">Morning</span>
+            </div>
+              <p class="fn__venue">
+                97-B Ishar nagar Ludhiana<span class="fn__addr">Morning prayer</span>
+              </p>
+          </article>
+          <article class="fn" data-fn-name="Ring Ceremony" data-fn-venue-name="Venue to be confirmed">
+            <h3 class="fn__name">Ring Ceremony</h3>
+            <div class="fn__when">
+              <span class="fn__date">16-11-2026</span>
+              <span class="fn__time">Morning</span>
+            </div>
+              <p class="fn__venue">
+                paradise dream Gill pind Ludhiana<span class="fn__addr">Morning celebration</span>
+              </p>
+          </article>
+          <article class="fn" data-fn-name="Haldi (Vatna)" data-fn-venue-name="Venue to be confirmed">
+            <h3 class="fn__name">Haldi (Vatna)</h3>
+            <div class="fn__when">
+              <span class="fn__date">17-11-2026</span>
+              <span class="fn__time">Afternoon</span>
+            </div>
+              <p class="fn__venue">
+                97-B Ishar nagar Ludhiana<span class="fn__addr">Afternoon celebration</span>
+              </p>
+          </article>
+          <article class="fn" data-fn-name="Mehandi" data-fn-venue-name="Venue to be confirmed">
+            <h3 class="fn__name">Mehandi</h3>
+            <div class="fn__when">
+              <span class="fn__date">18-11-2026</span>
+              <span class="fn__time">Afternoon</span>
+            </div>
+              <p class="fn__venue">
+                97-B Ishar nagar Ludhiana<span class="fn__addr">Afternoon celebration</span>
+              </p>
+          </article>
+          <article class="fn" data-fn-name="Jagoo" data-fn-venue-name="Venue to be confirmed">
+            <h3 class="fn__name">Jagoo</h3>
+            <div class="fn__when">
+              <span class="fn__date">19-11-2026</span>
+              <span class="fn__time">Evening</span>
+            </div>
+              <p class="fn__venue">
+                97-B Ishar nagar Ludhiana<span class="fn__addr">Evening celebration</span>
+              </p>
+          </article>
+          <article class="fn" data-fn-name="Anand Karaj" data-fn-venue-name="Amantran Ville">
+            <h3 class="fn__name">Anand Karaj</h3>
+            <div class="fn__when">
+              <span class="fn__date">21-11-2026</span>
+              <span class="fn__time">Morning</span>
+            </div>
+              <p class="fn__venue">
+                Amantran Ville<span class="fn__addr">Morning ceremony</span>
+              </p>
+          </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════ SCENE 5 — Mehendi hands · things to know ══════════ -->
+  <section class="panel" data-scene="5" data-text="bottom-right" data-tint="warm">
+    <div class="layer bg"       data-depth="0" data-bg="./images/section_five_bg.png" data-bg-p="./images/section_five_bg.png" style="background-image:url('./images/section_five_bg.png'); background-size:cover; background-position:center; background-repeat:no-repeat;"></div>
+    <div class="layer el hands" data-depth="15" data-src="./images/section_five_mehandi_hands.png" style="background-image:url('./images/section_five_mehandi_hands.png'); background-size:cover; background-position:center; background-repeat:no-repeat;"></div>
+    <div class="layer el fill"  data-depth="34" data-src="./images/section_five_petals.png" style="background-image:url('./images/section_five_petals.png'); background-size:cover; background-position:center; background-repeat:no-repeat;"></div>
+
+    <div class="panel__inner">
+      <p class="eyebrow">Things to know</p>
+      <div class="know">
+          <div class="know__row">
+            <span class="know__k">Anand Karaj venue</span>
+            <span class="know__v">Amantran Ville, New Grain Market, Back Side Arora Palace , Ludhiana</span>
+          </div>
+          <div class="know__row">
+            <span class="know__k">Anand Karaj</span>
+            <span class="know__v">Please cover your head during the ceremony</span>
+          </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════ SCENE 6 — Anand Karaj · the ceremony moment ══════════ -->
+  <section class="panel" data-scene="6" data-text="top-left" data-tint="warm">
+    <div class="layer bg"            data-depth="0" data-bg="./images/section_six_bg.png" data-bg-p="./images/section_six_bg.png" style="background-image:url('./images/section_six_bg.png'); background-size:cover; background-position:center; background-repeat:no-repeat;"></div>
+    <div class="layer el fill glow"  data-depth="6"  data-src="./images/section_six_glow.png" style="background-image:url('./images/section_six_glow.png'); background-size:cover; background-position:center; background-repeat:no-repeat;"></div>
+    <div class="layer el fig-center" data-depth="16" data-src="./images/section_six_couple_lavaan.png" style="background-image:url('./images/section_six_couple_lavaan.png'); background-size:cover; background-position:center; background-repeat:no-repeat;"></div>
+
+    <div class="panel__inner">
+      <div class="crest crest--sm" aria-hidden="true"></div>
+      <p class="eyebrow">Anand Karaj</p>
+      <h2 class="scene-title">
+          Two souls, one light
+      </h2>
+      <p class="lede" data-venue-slot>Amantran Ville, Ludhiana</p>
+    </div>
+  </section>
+
+  <!-- ══════════ SCENE 8 — Night field · RSVP + wishes (finale) ══════════ -->
+  <section class="panel panel--tall panel--finale" data-scene="8" data-text="top-left" data-tint="warm">
+    <div class="layer bg"            data-depth="0" data-bg="./images/section_eight_bg.png" data-bg-p="./images/section_eight_bg.png" style="background-image:url('./images/section_eight_bg.png'); background-size:cover; background-position:center; background-repeat:no-repeat;"></div>
+    <div class="layer el fill glow"  data-depth="6"  data-src="./images/section_eight_fireflies.png" style="background-image:url('./images/section_eight_fireflies.png'); background-size:cover; background-position:center; background-repeat:no-repeat;"></div>
+    <div class="layer el fig-seated" data-depth="15" data-src="./images/section_eight_couple_sit.png" style="background-image:url('./images/section_eight_couple_sit.png'); background-size:cover; background-position:center; background-repeat:no-repeat;"></div>
+    <div class="layer el fill"       data-depth="28" data-src="./images/section_eight_grass_fg.png" style="background-image:url('./images/section_eight_grass_fg.png'); background-size:cover; background-position:center; background-repeat:no-repeat;"></div>
+
+    <div class="panel__inner panel__inner--wide">
+      <div class="closing-card">
+        <p class="eyebrow">With love and gratitude</p>
+        <h2 class="scene-title">Our hearts are full</h2>
+        <p class="closing-quote">“We are deeply grateful to celebrate this new chapter with the people who have filled our lives with love, laughter, and blessings.”</p>
+        <p class="closing-line">Your presence is the greatest gift as we begin this beautiful journey together.</p>
+        <div class="closing-signoff">
+          <span>Gurkomal Kaur</span>
+          <span class="closing-signoff__amp">&amp;</span>
+          <span>Amanpreet Singh</span>
+        </div>
+        <p class="footer__date">21 November 2026 • JK Resort, Malerkotla Road</p>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<button class="music" id="music-btn" type="button" aria-label="Toggle background music" aria-pressed="false">
+  <svg class="music__on" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <path d="M9 18V6l10-2v12" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="6.5" cy="18" r="2.5" fill="none" stroke="currentColor" stroke-width="1.7"/>
+    <circle cx="16.5" cy="16" r="2.5" fill="none" stroke="currentColor" stroke-width="1.7"/>
+  </svg>
+  <span class="music__bars" aria-hidden="true"><i></i><i></i><i></i></span>
+</button>
+<audio id="music" src="./images/song.mp3" loop preload="none"></audio>
+
+<!-- All wishes. Sits at body level, outside .scroller and the panels, so the
+     fixed overlay is not trapped inside a scrolling/transformed ancestor. -->
+<div class="wishall" id="wishAllOverlay">
+  <div class="wishall__dialog" role="dialog" aria-modal="true" aria-labelledby="wishAllTitle">
+    <div class="wishall__head">
+      <h2 class="wishall__title" id="wishAllTitle">All wishes</h2>
+      <button class="wishall__close" type="button" id="wishAllClose" aria-label="Close wishes">Close</button>
+    </div>
+    <div class="wishall__list" id="wishAllList"></div>
+  </div>
+</div>
+
+<!-- GSAP is self-hosted, not pulled from cdnjs. The platform's CSP script-src
+     allows only 'self' and the media CDN, so a cdnjs <script> is blocked outright
+     and every scroll animation silently no-ops. Loaded from here (not injected by
+     script.js) because relative asset paths are rewritten to the CDN in HTML but
+     NOT in JS — see guide.md 6.1.
+     `defer` keeps document order, so both are executed before script.js runs. -->
+<style>
+  .layer.el {
+    position: absolute !important;
+    will-change: transform, opacity;
+  }
+
+  .layer.el.fig-left,
+  .layer.el.fig-right {
+    width: min(48vw, 40rem) !important;
+    height: min(88vh, 46rem) !important;
+    bottom: 0 !important;
+    left: auto !important;
+    right: auto !important;
+    transform: none !important;
+    background-size: contain !important;
+    background-position: center bottom !important;
+    background-repeat: no-repeat !important;
+  }
+
+  .layer {
+    translate: 0 var(--parallax-y, 0px);
+  }
+
+  .layer.el.fig-left,
+  .layer.el.fig-right {
+    transform: translateY(var(--parallax-y, 0px)) !important;
+  }
+
+  .layer.el.fig-center,
+  .layer.el.fig-seated {
+    transform: translateX(-50%) translateY(var(--parallax-y, 0px)) !important;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .layer { translate: none; }
+  }
+
+  .layer.el.fig-left {
+    left: 5% !important;
+  }
+
+  .layer.el.fig-right {
+    right: 5% !important;
+  }
+
+  .layer.el.fig-center,
+  .layer.el.fig-seated {
+    width: min(78vw, 46rem) !important;
+    height: min(76vh, 38rem) !important;
+    left: 50% !important;
+    bottom: 0 !important;
+    transform: translateX(-50%) !important;
+    background-size: contain !important;
+    background-position: center bottom !important;
+    background-repeat: no-repeat !important;
+  }
+
+  .gate {
+    transition: opacity 0.35s ease, visibility 0.35s ease;
+  }
+
+  .gate.is-open {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  @media (max-width: 900px) {
+    .layer.el.fig-left,
+    .layer.el.fig-right {
+      width: min(54vw, 32rem) !important;
+      height: min(82vh, 38rem) !important;
+    }
+
+    .layer.el.fig-center,
+    .layer.el.fig-seated {
+      width: min(88vw, 38rem) !important;
+      height: min(68vh, 30rem) !important;
+    }
+  }
+
+  @media (max-width: 600px) {
+    .layer.el.fig-left,
+    .layer.el.fig-right {
+      width: min(74vw, 25rem) !important;
+      height: min(76svh, 32rem) !important;
+    }
+
+    .layer.el.fig-left {
+      left: -8% !important;
+    }
+
+    .layer.el.fig-right {
+      right: -8% !important;
+    }
+
+    .layer.el.fig-center,
+    .layer.el.fig-seated {
+      width: min(96vw, 30rem) !important;
+      height: min(60svh, 26rem) !important;
+    }
+  }
+</style>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    var gate = document.getElementById('gate');
+    var button = document.getElementById('gate-btn');
+    var scroller = document.getElementById('scroller');
+    var musicBtn = document.getElementById('music-btn');
+    var music = document.getElementById('music');
+    var musicEnabled = false;
+    var audioCtx = null;
+    var melodyTimer = null;
+    var melodyIndex = 0;
+    var melody = [261.63, 329.63, 392, 329.63, 293.66, 349.23, 440, 392];
+    var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var scrollFrame = 0;
+
+    var languageEnglishButton = document.getElementById('language-en');
+    var languagePunjabiButton = document.getElementById('language-pa');
+    var punjabiTranslations = {
+      'You are invited to the wedding of': 'ਤੁਹਾਨੂੰ ਵਿਆਹ ਸਮਾਗਮ ਵਿੱਚ ਸੱਦਾ ਦਿੱਤਾ ਜਾਂਦਾ ਹੈ',
+      'Open the invitation': 'ਸੱਦਾ ਪੱਤਰ ਖੋਲ੍ਹੋ',
+      'With the blessings of Waheguru': 'ਵਾਹਿਗੁਰੂ ਜੀ ਦੀ ਕਿਰਪਾ ਨਾਲ',
+      'are getting married': 'ਵਿਆਹ ਦੇ ਬੰਧਨ ਵਿੱਚ ਬੱਝ ਰਹੇ ਹਨ',
+      'Scroll': 'ਹੇਠਾਂ ਵੇਖੋ',
+      'Together with our families': 'ਆਪਣੇ ਪਰਿਵਾਰਾਂ ਦੇ ਨਾਲ',
+      'With love and gratitude': 'ਪਿਆਰ ਅਤੇ ਧੰਨਵਾਦ ਨਾਲ',
+      'Our hearts are full': 'ਸਾਡੀਆਂ ਦਿਲਾਂ ਭਰੀਆਂ ਹਨ',
+      '“We are deeply grateful to celebrate this new chapter with the people who have filled our lives with love, laughter, and blessings.”': '“ਅਸੀਂ ਬਹੁਤ ਧੰਨਵਾਦੀ ਹਾਂ ਕਿ ਅਸੀਂ ਇਸ ਨਵੇਂ ਮੁਹਾਰੇ ਨੂੰ ਉਹਨਾਂ ਲੋਕਾਂ ਨਾਲ ਮਨਾਉਂਦੇ ਹਾਂ ਜਿਨ੍ਹਾਂ ਨੇ ਸਾਡੇ ਜੀਵਨ ਨੂੰ ਪਿਆਰ, ਖੁਸ਼ੀਆਂ ਅਤੇ ਅਸੀਸਾਂ ਨਾਲ ਭਰ ਦਿੱਤਾ ਹੈ।”',
+      'Your presence is the greatest gift as we begin this beautiful journey together.': 'ਤੁਹਾਡੀ ਮੌਜੂਦਗੀ ਸਭ ਤੋਂ ਵੱਡਾ ਭੁਗਤਾਨ ਹੈ ਜਦੋਂ ਅਸੀਂ ਇਹ ਸੁੰਦਰ ਸਫਰ ਸ਼ੁਰੂ ਕਰ ਰਹੇ ਹਾਂ।',
+      '21 November 2026 • JK Resort, Malerkotla Road': '21 ਨਵੰਬਰ 2026 • ਜੇ.ਕੇ. ਰਿਜ਼ੋਰਟ, ਮਾਲੇਰਕੋਟਲਾ ਰੋਡ',
+      'Amantran Ville': 'ਅਮਨਤਰਨ ਵਿਲ',
+      'Amantran Ville, Ludhiana': 'ਅਮਨਤਰਨ ਵਿਲ, ਲੁਧਿਆਣਾ',
+      'Amantran Ville, New Grain Market, Back Side Arora Palace , Ludhiana': 'ਅਮਨਤਰਨ ਵਿਲ, ਨਵੀਂ ਗ੍ਰੇਨ ਮਾਰਕਿਟ, ਅਰੋਰਾ ਪਲਸ ਦੇ ਬੈਕ ਸਾਈਡ, ਲੁਧਿਆਣਾ',
+      'Son of': 'ਸਪੁੱਤਰ',
+      'Daughter of': 'ਸਪੁੱਤਰੀ',
+      'S. Gurnam Singh': 'ਸ. ਗੁਰਨਾਮ ਸਿੰਘ',
+      'Sdn. Sukhwinder Kaur': 'ਸ੍ਰੀਮਤੀ ਸੁਖਵਿੰਦਰ ਕੌਰ',
+      'S. Gurdev Singh': 'ਸ. ਗੁਰਦੇਵ ਸਿੰਘ',
+      'Sdn. Daljit Kaur': 'ਸ੍ਰੀਮਤੀ ਦਲਜੀਤ ਕੌਰ',
+      'We are both so grateful that you will stand beside us as we take our first steps together. The love shown to us by so many since our kurmai has moved us more than we can say, and we have felt every prayer. We would like to thank everyone most sincerely for their warmth and their blessings. We look forward to seeing you before Guru Sahib, and to celebrating with you after.': 'ਸਾਨੂੰ ਬਹੁਤ ਖੁਸ਼ੀ ਹੈ ਕਿ ਤੁਸੀਂ ਸਾਡੇ ਜੀਵਨ ਦੇ ਇਸ ਨਵੇਂ ਸਫ਼ਰ ਵਿੱਚ ਸਾਡੇ ਨਾਲ ਹੋਵੋਗੇ। ਸਾਡੀ ਕੁੜਮਾਈ ਤੋਂ ਬਾਅਦ ਮਿਲੇ ਤੁਹਾਡੇ ਪਿਆਰ ਅਤੇ ਅਸੀਸਾਂ ਲਈ ਅਸੀਂ ਦਿਲੋਂ ਧੰਨਵਾਦੀ ਹਾਂ। ਅਸੀਂ ਗੁਰੂ ਸਾਹਿਬ ਦੀ ਹਜ਼ੂਰੀ ਵਿੱਚ ਤੁਹਾਨੂੰ ਮਿਲਣ ਅਤੇ ਤੁਹਾਡੇ ਨਾਲ ਖੁਸ਼ੀਆਂ ਸਾਂਝੀਆਂ ਕਰਨ ਦੀ ਉਡੀਕ ਕਰ ਰਹੇ ਹਾਂ।',
+      'Save the date': 'ਤਾਰੀਖ਼ ਯਾਦ ਰੱਖੋ',
+      'Anand Karaj': 'ਆਨੰਦ ਕਾਰਜ',
+      'months': 'ਮਹੀਨੇ',
+      'days': 'ਦਿਨ',
+      'hrs': 'ਘੰਟੇ',
+      'min': 'ਮਿੰਟ',
+      'sec': 'ਸਕਿੰਟ',
+      'The celebrations': 'ਵਿਆਹ ਦੇ ਸਮਾਗਮ',
+      'Join us': 'ਸਾਡੇ ਨਾਲ ਜਸ਼ਨ ਮਨਾਓ',
+      'Sukhmani Sahib': 'ਸੁਖਮਨੀ ਸਾਹਿਬ',
+      'Ring Ceremony': 'ਮੁੰਦਰੀ ਦੀ ਰਸਮ',
+      'Haldi (Vatna)': 'ਹਲਦੀ (ਵਟਣਾ)',
+      'Mehandi': 'ਮਹਿੰਦੀ',
+      'Jagoo': 'ਜਾਗੋ',
+      'Morning': 'ਸਵੇਰ',
+      'Afternoon': 'ਦੁਪਹਿਰ',
+      'Evening': 'ਸ਼ਾਮ',
+      '97-B Ishar nagar Ludhiana': '97-B ਇਸਹਰ ਨਗਰ ਲੁਧਿਆਣਾ',
+      'paradise dream Gill pind Ludhiana': 'ਪੈਰੇਡਾਇਸ ਡ੍ਰੀਮ ਗਿੱਲ ਪਿੰਡ, ਲੁਧਿਆਣਾ',
+      'Morning prayer': 'ਸਵੇਰ ਦੀ ਅਰਦਾਸ',
+      'Morning celebration': 'ਸਵੇਰ ਦਾ ਸਮਾਗਮ',
+      'Afternoon celebration': 'ਦੁਪਹਿਰ ਦਾ ਸਮਾਗਮ',
+      'Evening celebration': 'ਸ਼ਾਮ ਦਾ ਸਮਾਗਮ',
+      'Morning ceremony': 'ਸਵੇਰ ਦੀ ਰਸਮ',
+      'Venue to be confirmed': 'ਸਥਾਨ ਦੀ ਪੁਸ਼ਟੀ ਬਾਕੀ ਹੈ',
+      'JK Resort, Malerkotla Road': 'ਜੇ.ਕੇ. ਰਿਜ਼ੋਰਟ, ਮਾਲੇਰਕੋਟਲਾ ਰੋਡ',
+      'Function': 'ਸਮਾਗਮ',
+      'Things to know': 'ਜ਼ਰੂਰੀ ਜਾਣਕਾਰੀ',
+      'Anand Karaj venue': 'ਆਨੰਦ ਕਾਰਜ ਦਾ ਸਥਾਨ',
+      'Please cover your head during the ceremony': 'ਕਿਰਪਾ ਕਰਕੇ ਆਨੰਦ ਕਾਰਜ ਦੌਰਾਨ ਸਿਰ ਢੱਕ ਕੇ ਰੱਖੋ',
+      'Two souls, one light': 'ਦੋ ਰੂਹਾਂ, ਇੱਕ ਜੋਤ',
+      'Will you join us?': 'ਕੀ ਤੁਸੀਂ ਸਾਡੇ ਨਾਲ ਸ਼ਾਮਲ ਹੋਵੋਗੇ?',
+      'RSVP': 'ਜਵਾਬ ਦਿਓ',
+      'Will you be joining us?': 'ਕੀ ਤੁਸੀਂ ਸਮਾਗਮ ਵਿੱਚ ਸ਼ਾਮਲ ਹੋਵੋਗੇ?',
+      'Yes, with joy': 'ਹਾਂ, ਖੁਸ਼ੀ ਨਾਲ',
+      'Sorry, I can’t': 'ਮਾਫ਼ ਕਰਨਾ, ਮੈਂ ਨਹੀਂ ਆ ਸਕਾਂਗਾ/ਸਕਾਂਗੀ',
+      'We will miss you.': 'ਸਾਨੂੰ ਤੁਹਾਡੀ ਕਮੀ ਮਹਿਸੂਸ ਹੋਵੇਗੀ।',
+      'Thank you for letting us know — you will be in our thoughts on the day.': 'ਸਾਨੂੰ ਦੱਸਣ ਲਈ ਧੰਨਵਾਦ। ਉਸ ਦਿਨ ਤੁਸੀਂ ਸਾਡੀਆਂ ਯਾਦਾਂ ਵਿੱਚ ਰਹੋਗੇ।',
+      'Change my answer': 'ਆਪਣਾ ਜਵਾਬ ਬਦਲੋ',
+      'Your name': 'ਤੁਹਾਡਾ ਨਾਮ',
+      'Phone': 'ਫ਼ੋਨ',
+      'Email': 'ਈਮੇਲ',
+      'Guests with you': 'ਤੁਹਾਡੇ ਨਾਲ ਮਹਿਮਾਨ',
+      'Meal preference': 'ਖਾਣੇ ਦੀ ਪਸੰਦ',
+      'Veg / Jain / none': 'ਸ਼ਾਕਾਹਾਰੀ / ਜੈਨ / ਕੋਈ ਨਹੀਂ',
+      'A note for us': 'ਸਾਡੇ ਲਈ ਸੁਨੇਹਾ',
+      'Send RSVP': 'ਜਵਾਬ ਭੇਜੋ',
+      'Bless the couple': 'ਜੋੜੇ ਨੂੰ ਅਸੀਸ ਦਿਓ',
+      'Wishes': 'ਸ਼ੁਭਕਾਮਨਾਵਾਂ',
+      'Your wish': 'ਤੁਹਾਡੀ ਸ਼ੁਭਕਾਮਨਾ',
+      'Send your wish': 'ਸ਼ੁਭਕਾਮਨਾ ਭੇਜੋ',
+      'View all wishes': 'ਸਾਰੀਆਂ ਸ਼ੁਭਕਾਮਨਾਵਾਂ ਵੇਖੋ',
+      'All wishes': 'ਸਾਰੀਆਂ ਸ਼ੁਭਕਾਮਨਾਵਾਂ',
+      'Close': 'ਬੰਦ ਕਰੋ',
+      'Close wishes': 'ਸ਼ੁਭਕਾਮਨਾਵਾਂ ਬੰਦ ਕਰੋ',
+      'Toggle background music': 'ਪਿਛੋਕੜ ਸੰਗੀਤ ਚਾਲੂ ਜਾਂ ਬੰਦ ਕਰੋ',
+      'Gurkomal Kaur': 'ਗੁਰਕੋਮਲ ਕੌਰ',
+      'Amanpreet Singh': 'ਅਮਨਪ੍ਰੀਤ ਸਿੰਘ',
+      'Gurkomal Kaur & Amanpreet Singh': 'ਗੁਰਕੋਮਲ ਕੌਰ ਅਤੇ ਅਮਨਪ੍ਰੀਤ ਸਿੰਘ'
+    };
+
+    function setLanguage(language) {
+      var translations = language === 'pa' ? punjabiTranslations : Object.fromEntries(
+        Object.entries(punjabiTranslations).map(function (entry) { return [entry[1], entry[0]]; })
+      );
+      var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      var textNode;
+
+      while ((textNode = walker.nextNode())) {
+        var originalText = textNode.nodeValue;
+        var trimmedText = originalText.trim();
+        if (!translations[trimmedText]) continue;
+        var leadingSpace = originalText.match(/^\s*/)[0];
+        var trailingSpace = originalText.match(/\s*$/)[0];
+        textNode.nodeValue = leadingSpace + translations[trimmedText] + trailingSpace;
+      }
+
+      document.querySelectorAll('[placeholder]').forEach(function (field) {
+        var translatedPlaceholder = translations[field.getAttribute('placeholder')];
+        if (translatedPlaceholder) field.setAttribute('placeholder', translatedPlaceholder);
+      });
+      document.querySelectorAll('[aria-label]').forEach(function (control) {
+        var translatedLabel = translations[control.getAttribute('aria-label')];
+        if (translatedLabel) control.setAttribute('aria-label', translatedLabel);
+      });
+      document.title = language === 'pa' ? 'ਗੁਰਕੋਮਲ ਕੌਰ ਅਤੇ ਅਮਨਪ੍ਰੀਤ ਸਿੰਘ — ਵਿਆਹ ਦਾ ਸੱਦਾ' : 'Gurkomal Kaur & Amanpreet Singh — Wedding Invitation';
+      document.documentElement.lang = language;
+      languageEnglishButton.setAttribute('aria-pressed', String(language === 'en'));
+      languagePunjabiButton.setAttribute('aria-pressed', String(language === 'pa'));
+      document.querySelector('.language-switch').setAttribute('aria-label', language === 'pa' ? 'ਭਾਸ਼ਾ ਚੁਣੋ' : 'Choose language');
+    }
+
+    languageEnglishButton.addEventListener('click', function () { setLanguage('en'); });
+    languagePunjabiButton.addEventListener('click', function () { setLanguage('pa'); });
+
+    function updateCountdown() {
+      var countdown = document.getElementById('countdown');
+      if (!countdown) return;
+
+      var target = new Date(2026, 10, 21, 0, 0, 0);
+      var now = new Date();
+      var months = Math.max(0, (target.getFullYear() - now.getFullYear()) * 12 + target.getMonth() - now.getMonth());
+
+      function addMonths(date, count) {
+        var result = new Date(date);
+        var day = result.getDate();
+        result.setDate(1);
+        result.setMonth(result.getMonth() + count);
+        var lastDay = new Date(result.getFullYear(), result.getMonth() + 1, 0).getDate();
+        result.setDate(Math.min(day, lastDay));
+        return result;
+      }
+
+      var cursor = addMonths(now, months);
+      if (cursor > target) {
+        months = Math.max(0, months - 1);
+        cursor = addMonths(now, months);
+      }
+
+      var remaining = Math.max(0, target.getTime() - cursor.getTime());
+      var days = Math.floor(remaining / 86400000);
+      remaining %= 86400000;
+      var hours = Math.floor(remaining / 3600000);
+      remaining %= 3600000;
+      var minutes = Math.floor(remaining / 60000);
+      var seconds = Math.floor((remaining % 60000) / 1000);
+
+      countdown.querySelector('[data-cd="months"]').textContent = months;
+      countdown.querySelector('[data-cd="days"]').textContent = days;
+      countdown.querySelector('[data-cd="hours"]').textContent = hours;
+      countdown.querySelector('[data-cd="mins"]').textContent = minutes;
+      countdown.querySelector('[data-cd="secs"]').textContent = seconds;
+      countdown.hidden = false;
+    }
+
+    function markLayersReady() {
+      var layers = document.querySelectorAll('.layer');
+      layers.forEach(function (layer) {
+        layer.classList.add('is-ready');
+      });
+    }
+
+    function animateFigures() {
+      if (reducedMotion || !Element.prototype.animate) return;
+      document.querySelectorAll('.layer.el.fig-left, .layer.el.fig-right, .layer.el.fig-center, .layer.el.fig-seated').forEach(function (figure, index) {
+        figure.animate([
+          { translate: '0 -3px' },
+          { translate: '0 -13px' },
+          { translate: '0 -3px' }
+        ], {
+          duration: 3600 + (index % 3) * 450,
+          iterations: Infinity,
+          easing: 'ease-in-out'
+        });
+      });
+    }
+
+    function startMusic() {
+      if (!music) return;
+      music.volume = 0.85;
+      music.play().then(function () {
+        musicEnabled = true;
+        if (musicBtn) {
+          musicBtn.setAttribute('aria-pressed', 'true');
+          musicBtn.classList.add('is-playing');
+        }
+      }).catch(function () {
+        startFallbackMusic();
+      });
+    }
+
+    function startFallbackMusic() {
+      var AudioCtor = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtor) return;
+      if (!audioCtx) audioCtx = new AudioCtor();
+
+      function begin() {
+        if (!musicEnabled || audioCtx.state !== 'running') return;
+        clearInterval(melodyTimer);
+        function playNote() {
+          var now = audioCtx.currentTime;
+          var root = melody[melodyIndex % melody.length];
+          [root, root * 1.5].forEach(function (frequency, index) {
+            var oscillator = audioCtx.createOscillator();
+            var gainNode = audioCtx.createGain();
+            oscillator.type = index === 0 ? 'triangle' : 'sine';
+            oscillator.frequency.value = frequency;
+            gainNode.gain.setValueAtTime(0.0001, now);
+            gainNode.gain.exponentialRampToValueAtTime(index === 0 ? 0.12 : 0.04, now + 0.04);
+            gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.58);
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            oscillator.start(now);
+            oscillator.stop(now + 0.6);
+          });
+          melodyIndex += 1;
+        }
+        playNote();
+        melodyTimer = setInterval(playNote, 620);
+        if (musicBtn) {
+          musicBtn.setAttribute('aria-pressed', 'true');
+          musicBtn.classList.add('is-playing');
+        }
+      }
+
+      musicEnabled = true;
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume().then(begin).catch(function () {});
+      } else {
+        begin();
+      }
+    }
+
+    function stopMusic() {
+      musicEnabled = false;
+      if (music) music.pause();
+      clearInterval(melodyTimer);
+      if (audioCtx && audioCtx.state === 'running') audioCtx.suspend();
+      if (musicBtn) musicBtn.setAttribute('aria-pressed', 'false');
+      if (musicBtn) musicBtn.classList.remove('is-playing');
+    }
+
+    function updateParallax() {
+      scrollFrame = 0;
+      if (!scroller || reducedMotion) return;
+      document.querySelectorAll('.panel').forEach(function (panel) {
+        var panelTop = panel.getBoundingClientRect().top;
+        panel.querySelectorAll('.layer').forEach(function (layer) {
+          var depth = Number(layer.getAttribute('data-depth')) || 0;
+          var offset = Math.max(-36, Math.min(36, -panelTop * depth * 0.0018));
+          layer.style.setProperty('--parallax-y', '-38.3px');
+        });
+      });
+    }
+
+    function requestParallax() {
+      if (!scrollFrame) scrollFrame = window.requestAnimationFrame(updateParallax);
+    }
+
+    if (!gate || !button) return;
+
+    markLayersReady();
+    animateFigures();
+    updateCountdown();
+    window.setInterval(updateCountdown, 1000);
+    if (scroller) {
+      scroller.addEventListener('scroll', requestParallax, { passive: true });
+      window.addEventListener('resize', requestParallax);
+      updateParallax();
+    }
+
+    button.addEventListener('click', function () {
+      gate.classList.add('is-open');
+      gate.setAttribute('aria-hidden', 'true');
+      gate.style.opacity = '0';
+      gate.style.visibility = 'hidden';
+      gate.style.pointerEvents = 'none';
+      gate.style.display = 'none';
+
+      if (musicBtn) {
+        startMusic();
+      }
+
+      setTimeout(function () {
+        if (scroller) {
+          scroller.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } else {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      }, 120);
+    });
+
+    if (musicBtn) {
+      musicBtn.addEventListener('click', function () {
+        if (musicEnabled) {
+          stopMusic();
+        } else {
+          startMusic();
+        }
+      });
+    }
+  });
+</script>
+</body>
+</html>
